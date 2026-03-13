@@ -1,0 +1,38 @@
+name: Build StockInvoiceApp
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 7.0.x
+
+      - name: Restore
+        run: dotnet restore "Stock&Inovice.sln"
+
+      - name: Build
+        run: dotnet build "Stock&Inovice.sln" --configuration Release --no-restore
+
+      - name: Publish
+        run: dotnet publish .\StockInvoiceApp\StockInvoiceApp.csproj -c Release -o .\artifacts\publish
+
+      - name: Upload Publish Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: StockInvoiceApp-publish
+          path: artifacts/publish
+          if-no-files-found: error

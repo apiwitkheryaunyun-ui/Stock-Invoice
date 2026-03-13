@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="650" viewBox="0 0 1200 650">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#fef7ec" />
+      <stop offset="100%" stop-color="#dbeafe" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="650" fill="url(#bg)" />
+  <text x="60" y="80" font-family="Segoe UI, sans-serif" font-size="46" fill="#0f172a" font-weight="700">Dashboard: KPI + Charts</text>
+  <rect x="60" y="120" width="1080" height="480" rx="18" fill="#ffffff" stroke="#cbd5e1" />
+  <rect x="90" y="160" width="230" height="110" rx="12" fill="#f1f5f9" />
+  <rect x="340" y="160" width="230" height="110" rx="12" fill="#f1f5f9" />
+  <rect x="590" y="160" width="230" height="110" rx="12" fill="#f1f5f9" />
+  <rect x="840" y="160" width="230" height="110" rx="12" fill="#f1f5f9" />
+  <rect x="90" y="300" width="500" height="140" rx="12" fill="#eff6ff" />
+  <polyline points="120,400 180,360 240,380 300,330 360,350 420,300 480,315 550,280" fill="none" stroke="#1d4ed8" stroke-width="4" />
+  <rect x="620" y="300" width="450" height="260" rx="12" fill="#fff7ed" />
+  <line x1="650" y1="520" x2="1040" y2="520" stroke="#fb923c" stroke-width="3" />
+  <line x1="690" y1="520" x2="690" y2="440" stroke="#ea580c" stroke-width="20" />
+  <line x1="760" y1="520" x2="760" y2="390" stroke="#ea580c" stroke-width="20" />
+  <line x1="830" y1="520" x2="830" y2="470" stroke="#ea580c" stroke-width="20" />
+  <line x1="900" y1="520" x2="900" y2="350" stroke="#ea580c" stroke-width="20" />
+  <line x1="970" y1="520" x2="970" y2="420" stroke="#ea580c" stroke-width="20" />
+</svg>
