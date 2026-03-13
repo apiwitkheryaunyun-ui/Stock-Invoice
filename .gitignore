@@ -1,0 +1,25 @@
+# Build outputs
+bin/
+obj/
+publish/
+
+# Visual Studio / VS Code
+.vs/
+*.user
+*.suo
+
+# JetBrains
+.idea/
+
+# Logs
+*.log
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# SQLite runtime data
+data/*.db
+
+# Shortcuts
+*.lnk
