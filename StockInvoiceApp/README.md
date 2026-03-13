@@ -7,6 +7,10 @@ This WPF starter includes:
 - Dashboard date filter (From/To) and low-stock threshold filter
 - Low-stock highlight in stock table (rows are tinted)
 - Dashboard PDF export
+- Invoice PDF export (business style with company profile/logo and full item list)
+- Master Data management inside app (products/customers CRUD)
+- Manual stock adjustment inside app (+/-)
+- Paid invoice lock rules and safe delete restrictions
 - Invoice CRUD first version with auto subtotal/tax/grand total
 - CSV import page for `products` and `customers`
 
@@ -63,6 +67,16 @@ Configure in `appsettings.json`:
 - `ConnectionStrings.ProdDb`
 - `Seeding.EnableDemoSeed`
 
+## Company profile for Invoice PDF
+Configure in `appsettings.json` under `Company`:
+- `Name`
+- `TaxId`
+- `AddressLine1`
+- `AddressLine2`
+- `Phone`
+- `Email`
+- `LogoPath` (absolute path or workspace-relative path)
+
 ## CSV format
 Use templates:
 - `SampleCsv/products_template.csv`
@@ -78,6 +92,16 @@ Use templates:
 Charts included:
 - Sales trend for latest 7 days
 - Sales trend for latest 12 months
+
+## Invoice business rules
+- `paid` invoice: cannot edit, cannot add/remove items, cannot delete
+- `draft`, `issued`, `cancelled`: can edit and can delete
+- Product/Customer already used in invoice history: cannot delete from system
+- Stock still decreases from invoice sales movements
+
+## Master data usage
+- `Master Data` tab: add/edit/delete products and customers
+- `Stock Adjustment` panel: increase/decrease stock with note and unit cost
 
 ## Notes
 - In demo mode, if invoice table is empty, demo seed runs automatically.

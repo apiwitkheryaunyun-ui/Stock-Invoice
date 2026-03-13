@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace StockInvoiceApp.Models;
 
@@ -8,6 +9,7 @@ public sealed class AppSettings
     public decimal TaxRatePercent { get; set; } = 7;
     public ConnectionStrings ConnectionStrings { get; set; } = new();
     public SeedingSettings Seeding { get; set; } = new();
+    public CompanyProfile Company { get; set; } = new();
 }
 
 public sealed class ConnectionStrings
@@ -19,6 +21,17 @@ public sealed class ConnectionStrings
 public sealed class SeedingSettings
 {
     public bool EnableDemoSeed { get; set; } = true;
+}
+
+public sealed class CompanyProfile
+{
+    public string Name { get; set; } = "My Company Co., Ltd.";
+    public string TaxId { get; set; } = "0100000000000";
+    public string AddressLine1 { get; set; } = "Company Address Line 1";
+    public string AddressLine2 { get; set; } = "Company Address Line 2";
+    public string Phone { get; set; } = "02-000-0000";
+    public string Email { get; set; } = "hello@company.local";
+    public string LogoPath { get; set; } = "";
 }
 
 public sealed class CustomerLookup
@@ -99,4 +112,61 @@ public sealed class SalesSeriesPoint
 {
     public string Label { get; set; } = string.Empty;
     public decimal Amount { get; set; }
+}
+
+public sealed class ProductManageRow
+{
+    public int Id { get; set; }
+    public string Sku { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Unit { get; set; } = "pcs";
+    public decimal SellPrice { get; set; }
+    public decimal CostPrice { get; set; }
+    public decimal TaxRate { get; set; } = 7;
+    public decimal StockQty { get; set; }
+    public bool IsActive { get; set; } = true;
+}
+
+public sealed class CustomerManageRow
+{
+    public int Id { get; set; }
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string TaxId { get; set; } = string.Empty;
+    public string Phone { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string Address { get; set; } = string.Empty;
+    public bool IsActive { get; set; } = true;
+}
+
+public sealed class InvoicePrintData
+{
+    public int InvoiceId { get; set; }
+    public string InvoiceNo { get; set; } = string.Empty;
+    public DateTime InvoiceDate { get; set; }
+    public DateTime? DueDate { get; set; }
+    public string Status { get; set; } = "issued";
+    public string Notes { get; set; } = string.Empty;
+    public decimal Subtotal { get; set; }
+    public decimal TaxTotal { get; set; }
+    public decimal GrandTotal { get; set; }
+    public int CustomerId { get; set; }
+    public string CustomerCode { get; set; } = string.Empty;
+    public string CustomerName { get; set; } = string.Empty;
+    public string CustomerTaxId { get; set; } = string.Empty;
+    public string CustomerPhone { get; set; } = string.Empty;
+    public string CustomerEmail { get; set; } = string.Empty;
+    public string CustomerAddress { get; set; } = string.Empty;
+    public List<InvoicePrintItem> Items { get; set; } = new();
+}
+
+public sealed class InvoicePrintItem
+{
+    public int LineNo { get; set; }
+    public string ProductSku { get; set; } = string.Empty;
+    public string ProductName { get; set; } = string.Empty;
+    public decimal Qty { get; set; }
+    public decimal UnitPrice { get; set; }
+    public decimal Discount { get; set; }
+    public decimal LineTotal { get; set; }
 }

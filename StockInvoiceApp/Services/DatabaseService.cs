@@ -78,6 +78,225 @@ public sealed class DatabaseService
         return result;
     }
 
+    public List<ProductManageRow> GetManageProducts()
+    {
+        var rows = new List<ProductManageRow>();
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"SELECT id, sku, name, unit, sell_price, cost_price, tax_rate, stock_qty, is_active
+                            FROM products
+                            ORDER BY name;";
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            rows.Add(new ProductManageRow
+            {
+                Id = reader.GetInt32(0),
+                Sku = reader.GetString(1),
+                Name = reader.GetString(2),
+                Unit = reader.GetString(3),
+                SellPrice = reader.GetDecimal(4),
+                CostPrice = reader.GetDecimal(5),
+                TaxRate = reader.GetDecimal(6),
+                StockQty = reader.GetDecimal(7),
+                IsActive = reader.GetInt32(8) == 1
+            });
+        }
+
+        return rows;
+    }
+
+    public List<CustomerManageRow> GetManageCustomers()
+    {
+        var rows = new List<CustomerManageRow>();
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"SELECT id, code, name, tax_id, phone, email, address, is_active
+                            FROM customers
+                            ORDER BY name;";
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            rows.Add(new CustomerManageRow
+            {
+                Id = reader.GetInt32(0),
+                Code = reader.GetString(1),
+                Name = reader.GetString(2),
+                TaxId = reader.IsDBNull(3) ? string.Empty : reader.GetString(3),
+                Phone = reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
+                Email = reader.IsDBNull(5) ? string.Empty : reader.GetString(5),
+                Address = reader.IsDBNull(6) ? string.Empty : reader.GetString(6),
+                IsActive = reader.GetInt32(7) == 1
+            });
+        }
+
+        return rows;
+    }
+
+    public void SaveProduct(ProductManageRow product)
+    {
+        if (string.IsNullOrWhiteSpace(product.Sku) || string.IsNullOrWhiteSpace(product.Name))
+        {
+            throw new InvalidOperationException("SKU and product name are required.");
+        }
+
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+
+        if (product.Id == 0)
+        {
+            cmd.CommandText = @"INSERT INTO products (sku, name, unit, sell_price, cost_price, tax_rate, stock_qty, is_active, created_at, updated_at)
+                                VALUES ($sku, $name, $unit, $sell, $cost, $tax, 0, $active, datetime('now'), datetime('now'));";
+        }
+        else
+        {
+            cmd.CommandText = @"UPDATE products
+                                SET sku = $sku,
+                                    name = $name,
+                                    unit = $unit,
+                                    sell_price = $sell,
+                                    cost_price = $cost,
+                                    tax_rate = $tax,
+                                    is_active = $active,
+                                    updated_at = datetime('now')
+                                WHERE id = $id;";
+            cmd.Parameters.AddWithValue("$id", product.Id);
+        }
+
+        cmd.Parameters.AddWithValue("$sku", product.Sku.Trim());
+        cmd.Parameters.AddWithValue("$name", product.Name.Trim());
+        cmd.Parameters.AddWithValue("$unit", string.IsNullOrWhiteSpace(product.Unit) ? "pcs" : product.Unit.Trim());
+        cmd.Parameters.AddWithValue("$sell", product.SellPrice);
+        cmd.Parameters.AddWithValue("$cost", product.CostPrice);
+        cmd.Parameters.AddWithValue("$tax", product.TaxRate <= 0 ? TaxRatePercent : product.TaxRate);
+        cmd.Parameters.AddWithValue("$active", product.IsActive ? 1 : 0);
+
+        cmd.ExecuteNonQuery();
+    }
+
+    public void SaveCustomer(CustomerManageRow customer)
+    {
+        if (string.IsNullOrWhiteSpace(customer.Code) || string.IsNullOrWhiteSpace(customer.Name))
+        {
+            throw new InvalidOperationException("Customer code and name are required.");
+        }
+
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+
+        if (customer.Id == 0)
+        {
+            cmd.CommandText = @"INSERT INTO customers (code, name, tax_id, phone, email, address, is_active, created_at, updated_at)
+                                VALUES ($code, $name, $taxId, $phone, $email, $address, $active, datetime('now'), datetime('now'));";
+        }
+        else
+        {
+            cmd.CommandText = @"UPDATE customers
+                                SET code = $code,
+                                    name = $name,
+                                    tax_id = $taxId,
+                                    phone = $phone,
+                                    email = $email,
+                                    address = $address,
+                                    is_active = $active,
+                                    updated_at = datetime('now')
+                                WHERE id = $id;";
+            cmd.Parameters.AddWithValue("$id", customer.Id);
+        }
+
+        cmd.Parameters.AddWithValue("$code", customer.Code.Trim());
+        cmd.Parameters.AddWithValue("$name", customer.Name.Trim());
+        cmd.Parameters.AddWithValue("$taxId", string.IsNullOrWhiteSpace(customer.TaxId) ? (object)DBNull.Value : customer.TaxId.Trim());
+        cmd.Parameters.AddWithValue("$phone", string.IsNullOrWhiteSpace(customer.Phone) ? (object)DBNull.Value : customer.Phone.Trim());
+        cmd.Parameters.AddWithValue("$email", string.IsNullOrWhiteSpace(customer.Email) ? (object)DBNull.Value : customer.Email.Trim());
+        cmd.Parameters.AddWithValue("$address", string.IsNullOrWhiteSpace(customer.Address) ? (object)DBNull.Value : customer.Address.Trim());
+        cmd.Parameters.AddWithValue("$active", customer.IsActive ? 1 : 0);
+
+        cmd.ExecuteNonQuery();
+    }
+
+    public void DeleteProduct(int productId)
+    {
+        using var conn = Open();
+        using var check = conn.CreateCommand();
+        check.CommandText = "SELECT COUNT(1) FROM invoice_items WHERE product_id = $id;";
+        check.Parameters.AddWithValue("$id", productId);
+        var usedCount = Convert.ToInt32(check.ExecuteScalar(), CultureInfo.InvariantCulture);
+        if (usedCount > 0)
+        {
+            throw new InvalidOperationException("This product is already used in invoice history and cannot be deleted.");
+        }
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "DELETE FROM products WHERE id = $id;";
+        cmd.Parameters.AddWithValue("$id", productId);
+        cmd.ExecuteNonQuery();
+    }
+
+    public void DeleteCustomer(int customerId)
+    {
+        using var conn = Open();
+        using var check = conn.CreateCommand();
+        check.CommandText = "SELECT COUNT(1) FROM invoices WHERE customer_id = $id;";
+        check.Parameters.AddWithValue("$id", customerId);
+        var usedCount = Convert.ToInt32(check.ExecuteScalar(), CultureInfo.InvariantCulture);
+        if (usedCount > 0)
+        {
+            throw new InvalidOperationException("This customer is already used in invoice history and cannot be deleted.");
+        }
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "DELETE FROM customers WHERE id = $id;";
+        cmd.Parameters.AddWithValue("$id", customerId);
+        cmd.ExecuteNonQuery();
+    }
+
+    public void AdjustStock(int productId, decimal qtyChange, decimal unitCost, string note)
+    {
+        if (qtyChange == 0)
+        {
+            throw new InvalidOperationException("Stock adjustment qty cannot be zero.");
+        }
+
+        if (unitCost < 0)
+        {
+            throw new InvalidOperationException("Unit cost cannot be negative.");
+        }
+
+        using var conn = Open();
+        using var tx = conn.BeginTransaction();
+
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.Transaction = tx;
+            cmd.CommandText = @"INSERT INTO stock_movements (product_id, movement_type, ref_type, ref_id, movement_date, qty_change, unit_cost, note, created_at, updated_at)
+                                VALUES ($pid, $movementType, 'adjustment', NULL, date('now'), $qtyChange, $unitCost, $note, datetime('now'), datetime('now'));";
+            cmd.Parameters.AddWithValue("$pid", productId);
+            cmd.Parameters.AddWithValue("$movementType", qtyChange > 0 ? "in" : "out");
+            cmd.Parameters.AddWithValue("$qtyChange", qtyChange);
+            cmd.Parameters.AddWithValue("$unitCost", unitCost);
+            cmd.Parameters.AddWithValue("$note", string.IsNullOrWhiteSpace(note) ? "Manual stock adjustment" : note.Trim());
+            cmd.ExecuteNonQuery();
+        }
+
+        using (var update = conn.CreateCommand())
+        {
+            update.Transaction = tx;
+            update.CommandText = @"UPDATE products
+                                  SET stock_qty = (
+                                      SELECT IFNULL(ROUND(SUM(sm.qty_change), 2), 0)
+                                      FROM stock_movements sm
+                                      WHERE sm.product_id = products.id
+                                  ),
+                                  updated_at = datetime('now')
+                                  WHERE id = $id;";
+            update.Parameters.AddWithValue("$id", productId);
+            update.ExecuteNonQuery();
+        }
+
+        tx.Commit();
+    }
+
     public List<InvoiceSummary> GetInvoiceSummaries()
     {
         var result = new List<InvoiceSummary>();
@@ -162,6 +381,70 @@ public sealed class DatabaseService
         return (invoice, items);
     }
 
+    public InvoicePrintData GetInvoicePrintData(int invoiceId)
+    {
+        using var conn = Open();
+        var data = new InvoicePrintData();
+
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = @"SELECT i.id, i.invoice_no, i.invoice_date, i.due_date, i.status, i.notes, i.subtotal, i.tax_total, i.grand_total,
+                                       c.id, c.code, c.name, c.tax_id, c.phone, c.email, c.address
+                                FROM invoices i
+                                JOIN customers c ON c.id = i.customer_id
+                                WHERE i.id = $id;";
+            cmd.Parameters.AddWithValue("$id", invoiceId);
+            using var reader = cmd.ExecuteReader();
+            if (!reader.Read())
+            {
+                throw new InvalidOperationException("Invoice not found.");
+            }
+
+            data.InvoiceId = reader.GetInt32(0);
+            data.InvoiceNo = reader.GetString(1);
+            data.InvoiceDate = DateTime.Parse(reader.GetString(2), CultureInfo.InvariantCulture);
+            data.DueDate = reader.IsDBNull(3) ? null : DateTime.Parse(reader.GetString(3), CultureInfo.InvariantCulture);
+            data.Status = reader.GetString(4);
+            data.Notes = reader.IsDBNull(5) ? string.Empty : reader.GetString(5);
+            data.Subtotal = reader.GetDecimal(6);
+            data.TaxTotal = reader.GetDecimal(7);
+            data.GrandTotal = reader.GetDecimal(8);
+            data.CustomerId = reader.GetInt32(9);
+            data.CustomerCode = reader.GetString(10);
+            data.CustomerName = reader.GetString(11);
+            data.CustomerTaxId = reader.IsDBNull(12) ? string.Empty : reader.GetString(12);
+            data.CustomerPhone = reader.IsDBNull(13) ? string.Empty : reader.GetString(13);
+            data.CustomerEmail = reader.IsDBNull(14) ? string.Empty : reader.GetString(14);
+            data.CustomerAddress = reader.IsDBNull(15) ? string.Empty : reader.GetString(15);
+        }
+
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = @"SELECT ii.line_no, p.sku, p.name, ii.qty, ii.unit_price, ii.discount, ii.line_total
+                                FROM invoice_items ii
+                                JOIN products p ON p.id = ii.product_id
+                                WHERE ii.invoice_id = $id
+                                ORDER BY ii.line_no;";
+            cmd.Parameters.AddWithValue("$id", invoiceId);
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                data.Items.Add(new InvoicePrintItem
+                {
+                    LineNo = reader.GetInt32(0),
+                    ProductSku = reader.GetString(1),
+                    ProductName = reader.GetString(2),
+                    Qty = reader.GetDecimal(3),
+                    UnitPrice = reader.GetDecimal(4),
+                    Discount = reader.GetDecimal(5),
+                    LineTotal = reader.GetDecimal(6)
+                });
+            }
+        }
+
+        return data;
+    }
+
     public int SaveInvoice(InvoiceDetail invoice, IReadOnlyCollection<InvoiceItemRow> items)
     {
         if (items.Count == 0)
@@ -172,11 +455,25 @@ public sealed class DatabaseService
         using var conn = Open();
         using var tx = conn.BeginTransaction();
 
+        if (invoice.Id > 0)
+        {
+            using var lockCheck = conn.CreateCommand();
+            lockCheck.Transaction = tx;
+            lockCheck.CommandText = "SELECT status FROM invoices WHERE id = $id;";
+            lockCheck.Parameters.AddWithValue("$id", invoice.Id);
+            var currentStatus = lockCheck.ExecuteScalar()?.ToString() ?? string.Empty;
+            if (string.Equals(currentStatus, "paid", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("Paid invoice cannot be modified.");
+            }
+        }
+
         var subtotal = 0m;
         foreach (var item in items)
         {
             subtotal += item.LineTotal;
         }
+
         var tax = Math.Round(subtotal * (TaxRatePercent / 100m), 2);
         var grand = subtotal + tax;
 
@@ -239,9 +536,12 @@ public sealed class DatabaseService
             clearMoves.ExecuteNonQuery();
         }
 
+        var productIds = new HashSet<int>();
         var lineNo = 1;
         foreach (var item in items)
         {
+            productIds.Add(item.ProductId);
+
             using var insertItem = conn.CreateCommand();
             insertItem.Transaction = tx;
             insertItem.CommandText = @"INSERT INTO invoice_items (invoice_id, line_no, product_id, qty, unit_price, discount, line_total, created_at, updated_at)
@@ -267,20 +567,7 @@ public sealed class DatabaseService
             stockOut.ExecuteNonQuery();
         }
 
-        using (var updateStock = conn.CreateCommand())
-        {
-            updateStock.Transaction = tx;
-            updateStock.CommandText = @"UPDATE products
-                                        SET stock_qty = (
-                                            SELECT IFNULL(ROUND(SUM(sm.qty_change), 2), 0)
-                                            FROM stock_movements sm
-                                            WHERE sm.product_id = products.id
-                                        ),
-                                        updated_at = datetime('now')
-                                        WHERE id IN (SELECT DISTINCT product_id FROM invoice_items WHERE invoice_id = $id);";
-            updateStock.Parameters.AddWithValue("$id", invoice.Id);
-            updateStock.ExecuteNonQuery();
-        }
+        RecalculateProductsStock(conn, tx, productIds);
 
         tx.Commit();
         return invoice.Id;
@@ -291,19 +578,29 @@ public sealed class DatabaseService
         using var conn = Open();
         using var tx = conn.BeginTransaction();
 
-        using (var productIdsCmd = conn.CreateCommand())
+        using (var statusCmd = conn.CreateCommand())
         {
-            productIdsCmd.Transaction = tx;
-            productIdsCmd.CommandText = "CREATE TEMP TABLE IF NOT EXISTS tmp_product_ids(id INTEGER PRIMARY KEY);";
-            productIdsCmd.ExecuteNonQuery();
+            statusCmd.Transaction = tx;
+            statusCmd.CommandText = "SELECT status FROM invoices WHERE id = $id;";
+            statusCmd.Parameters.AddWithValue("$id", invoiceId);
+            var status = statusCmd.ExecuteScalar()?.ToString() ?? string.Empty;
+            if (string.Equals(status, "paid", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("Paid invoice cannot be deleted.");
+            }
         }
 
-        using (var insertTemp = conn.CreateCommand())
+        var productIds = new HashSet<int>();
+        using (var idsCmd = conn.CreateCommand())
         {
-            insertTemp.Transaction = tx;
-            insertTemp.CommandText = "INSERT OR IGNORE INTO tmp_product_ids(id) SELECT DISTINCT product_id FROM invoice_items WHERE invoice_id = $id;";
-            insertTemp.Parameters.AddWithValue("$id", invoiceId);
-            insertTemp.ExecuteNonQuery();
+            idsCmd.Transaction = tx;
+            idsCmd.CommandText = "SELECT DISTINCT product_id FROM invoice_items WHERE invoice_id = $id;";
+            idsCmd.Parameters.AddWithValue("$id", invoiceId);
+            using var reader = idsCmd.ExecuteReader();
+            while (reader.Read())
+            {
+                productIds.Add(reader.GetInt32(0));
+            }
         }
 
         using (var deleteMovements = conn.CreateCommand())
@@ -322,27 +619,7 @@ public sealed class DatabaseService
             deleteInvoice.ExecuteNonQuery();
         }
 
-        using (var updateStock = conn.CreateCommand())
-        {
-            updateStock.Transaction = tx;
-            updateStock.CommandText = @"UPDATE products
-                                        SET stock_qty = (
-                                            SELECT IFNULL(ROUND(SUM(sm.qty_change), 2), 0)
-                                            FROM stock_movements sm
-                                            WHERE sm.product_id = products.id
-                                        ),
-                                        updated_at = datetime('now')
-                                        WHERE id IN (SELECT id FROM tmp_product_ids);";
-            updateStock.ExecuteNonQuery();
-        }
-
-        using (var dropTemp = conn.CreateCommand())
-        {
-            dropTemp.Transaction = tx;
-            dropTemp.CommandText = "DROP TABLE IF EXISTS tmp_product_ids;";
-            dropTemp.ExecuteNonQuery();
-        }
-
+        RecalculateProductsStock(conn, tx, productIds);
         tx.Commit();
     }
 
@@ -509,33 +786,31 @@ public sealed class DatabaseService
         var filterFrom = fromDate?.Date ?? DateTime.Today.AddDays(-(days - 1));
         var filterTo = toDate?.Date ?? DateTime.Today;
 
-        using (var cmd = conn.CreateCommand())
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"SELECT invoice_date, IFNULL(SUM(grand_total), 0)
+                            FROM invoices
+                            WHERE status IN ('issued', 'paid')
+                              AND invoice_date BETWEEN $from AND $to
+                            GROUP BY invoice_date
+                            ORDER BY invoice_date;";
+        cmd.Parameters.AddWithValue("$from", filterFrom.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+        cmd.Parameters.AddWithValue("$to", filterTo.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+
+        var map = new Dictionary<string, decimal>(StringComparer.Ordinal);
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
         {
-            cmd.CommandText = @"SELECT invoice_date, IFNULL(SUM(grand_total), 0)
-                                FROM invoices
-                                WHERE status IN ('issued', 'paid')
-                                  AND invoice_date BETWEEN $from AND $to
-                                GROUP BY invoice_date
-                                ORDER BY invoice_date;";
-            cmd.Parameters.AddWithValue("$from", filterFrom.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
-            cmd.Parameters.AddWithValue("$to", filterTo.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+            map[reader.GetString(0)] = reader.GetDecimal(1);
+        }
 
-            var map = new Dictionary<string, decimal>(StringComparer.Ordinal);
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
+        for (var d = filterFrom; d <= filterTo; d = d.AddDays(1))
+        {
+            var key = d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            points.Add(new SalesSeriesPoint
             {
-                map[reader.GetString(0)] = reader.GetDecimal(1);
-            }
-
-            for (var d = filterFrom; d <= filterTo; d = d.AddDays(1))
-            {
-                var key = d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-                points.Add(new SalesSeriesPoint
-                {
-                    Label = d.ToString("dd/MM", CultureInfo.InvariantCulture),
-                    Amount = map.TryGetValue(key, out var amount) ? amount : 0m
-                });
-            }
+                Label = d.ToString("dd/MM", CultureInfo.InvariantCulture),
+                Amount = map.TryGetValue(key, out var amount) ? amount : 0m
+            });
         }
 
         return points;
@@ -550,33 +825,31 @@ public sealed class DatabaseService
         var from = fromDate?.Date ?? new DateTime(to.Year, to.Month, 1).AddMonths(-(months - 1));
         from = new DateTime(from.Year, from.Month, 1);
 
-        using (var cmd = conn.CreateCommand())
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"SELECT strftime('%Y-%m', invoice_date) AS ym, IFNULL(SUM(grand_total), 0)
+                            FROM invoices
+                            WHERE status IN ('issued', 'paid')
+                              AND invoice_date BETWEEN $from AND $to
+                            GROUP BY ym
+                            ORDER BY ym;";
+        cmd.Parameters.AddWithValue("$from", from.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+        cmd.Parameters.AddWithValue("$to", to.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+
+        var map = new Dictionary<string, decimal>(StringComparer.Ordinal);
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
         {
-            cmd.CommandText = @"SELECT strftime('%Y-%m', invoice_date) AS ym, IFNULL(SUM(grand_total), 0)
-                                FROM invoices
-                                WHERE status IN ('issued', 'paid')
-                                  AND invoice_date BETWEEN $from AND $to
-                                GROUP BY ym
-                                ORDER BY ym;";
-            cmd.Parameters.AddWithValue("$from", from.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
-            cmd.Parameters.AddWithValue("$to", to.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+            map[reader.GetString(0)] = reader.GetDecimal(1);
+        }
 
-            var map = new Dictionary<string, decimal>(StringComparer.Ordinal);
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
+        for (var m = from; m <= to; m = m.AddMonths(1))
+        {
+            var key = m.ToString("yyyy-MM", CultureInfo.InvariantCulture);
+            points.Add(new SalesSeriesPoint
             {
-                map[reader.GetString(0)] = reader.GetDecimal(1);
-            }
-
-            for (var m = from; m <= to; m = m.AddMonths(1))
-            {
-                var key = m.ToString("yyyy-MM", CultureInfo.InvariantCulture);
-                points.Add(new SalesSeriesPoint
-                {
-                    Label = m.ToString("MMM yy", CultureInfo.InvariantCulture),
-                    Amount = map.TryGetValue(key, out var amount) ? amount : 0m
-                });
-            }
+                Label = m.ToString("MMM yy", CultureInfo.InvariantCulture),
+                Amount = map.TryGetValue(key, out var amount) ? amount : 0m
+            });
         }
 
         return points;
@@ -602,6 +875,25 @@ public sealed class DatabaseService
         {
             cmd.CommandText += $" AND {column} <= $toDate";
             cmd.Parameters.AddWithValue("$toDate", toDate!.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+        }
+    }
+
+    private static void RecalculateProductsStock(SqliteConnection conn, SqliteTransaction tx, IEnumerable<int> productIds)
+    {
+        foreach (var productId in productIds)
+        {
+            using var updateStock = conn.CreateCommand();
+            updateStock.Transaction = tx;
+            updateStock.CommandText = @"UPDATE products
+                                        SET stock_qty = (
+                                            SELECT IFNULL(ROUND(SUM(sm.qty_change), 2), 0)
+                                            FROM stock_movements sm
+                                            WHERE sm.product_id = products.id
+                                        ),
+                                        updated_at = datetime('now')
+                                        WHERE id = $id;";
+            updateStock.Parameters.AddWithValue("$id", productId);
+            updateStock.ExecuteNonQuery();
         }
     }
 

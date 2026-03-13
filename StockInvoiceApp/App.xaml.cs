@@ -13,7 +13,8 @@ namespace StockInvoiceApp
 
             var csv = new CsvImportService();
             var pdf = new PdfReportService();
-            var window = new MainWindow(db, csv, pdf);
+            var invoicePdf = new InvoicePdfService(env, db);
+            var window = new MainWindow(db, csv, pdf, invoicePdf);
             window.Show();
         }
     }
