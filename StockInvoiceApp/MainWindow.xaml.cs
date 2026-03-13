@@ -1,5 +1,3 @@
-
-
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -30,8 +28,6 @@ namespace StockInvoiceApp
 
         private List<ProductLookup> _products = new();
         private List<CustomerLookup> _customers = new();
-
-
         private List<StockLevelRow> _stockRows = new();
         private List<SalesSeriesPoint> _dailySeries = new();
         private List<SalesSeriesPoint> _monthlySeries = new();
@@ -41,7 +37,6 @@ namespace StockInvoiceApp
         private int _editingCustomerId;
         private int _editingDynamicFieldId;
         private bool _invoiceLocked;
-
 
         public MainWindow(DatabaseService db, CsvImportService csvImport, PdfReportService pdfReport, InvoicePdfService invoicePdf)
         {
@@ -53,39 +48,9 @@ namespace StockInvoiceApp
             SetupView();
         }
 
-        // --- Language Switcher ---
-        private void BtnLangTh_Click(object sender, RoutedEventArgs e)
-        {
-            SwitchLanguage("th");
-        }
-
-        private void BtnLangEn_Click(object sender, RoutedEventArgs e)
-        {
-            SwitchLanguage("en");
-        }
-
-        private void SwitchLanguage(string lang)
-        {
-            var dict = new ResourceDictionary();
-            switch (lang)
-            {
-                case "en":
-                    dict.Source = new Uri("Resources/Strings.en.xaml", UriKind.Relative);
-                    break;
-                default:
-                    dict.Source = new Uri("Resources/Strings.th.xaml", UriKind.Relative);
-                    break;
-            }
-            var appResources = Application.Current.Resources.MergedDictionaries;
-            if (appResources.Count > 0)
-                appResources[0] = dict;
-            else
-                appResources.Add(dict);
-        }
-
         private void SetupView()
         {
-            // txtMode ถูกลบออกจาก XAML แล้ว ไม่ต้องเซ็ตค่า
+            txtMode.Text = $"Mode: {_db.AppMode.ToUpperInvariant()}";
             cbStatus.ItemsSource = new[] { "draft", "issued", "paid", "cancelled" };
             cbStatus.SelectedItem = "issued";
             cbDynDataType.ItemsSource = new[] { "text", "number", "date", "boolean", "image" };
