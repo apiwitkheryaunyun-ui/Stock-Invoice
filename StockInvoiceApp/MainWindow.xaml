@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:oxy="http://oxyplot.org/wpf"
         mc:Ignorable="d"
-        Title="Stock &amp; Invoice Starter" Height="860" Width="1380" MinHeight="760" MinWidth="1200">
+        Title="Stock &amp; Invoice Starter" Height="900" Width="1400" MinHeight="780" MinWidth="1220">
     <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -129,11 +129,7 @@
                                 <Button x:Name="btnDeleteInvoice" Content="Delete" Width="90" Margin="0,0,8,0" Click="DeleteInvoice_Click" />
                                 <Button Content="Export Invoice PDF" Width="140" Click="ExportInvoicePdf_Click" />
                             </StackPanel>
-                            <DataGrid x:Name="dgInvoices"
-                                      AutoGenerateColumns="False"
-                                      IsReadOnly="True"
-                                      SelectionMode="Single"
-                                      SelectionChanged="DgInvoices_SelectionChanged">
+                            <DataGrid x:Name="dgInvoices" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="DgInvoices_SelectionChanged">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60" />
                                     <DataGridTextColumn Header="Invoice No" Binding="{Binding InvoiceNo}" Width="140" />
@@ -149,6 +145,7 @@
                     <GroupBox Header="Invoice Editor" Grid.Column="1">
                         <Grid Margin="8">
                             <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
@@ -180,7 +177,13 @@
                             <TextBlock Text="Notes" Grid.Row="3" Grid.Column="2" VerticalAlignment="Center" />
                             <TextBox x:Name="txtNotes" Grid.Row="3" Grid.Column="3" Margin="0,0,0,6" />
 
-                            <Border Grid.Row="4" Grid.ColumnSpan="4" BorderBrush="#DDD" BorderThickness="1" Padding="8" Margin="0,6,0,8">
+                            <GroupBox Grid.Row="4" Grid.ColumnSpan="4" Header="Invoice Dynamic Fields" Margin="0,0,0,8">
+                                <ScrollViewer Height="120" VerticalScrollBarVisibility="Auto">
+                                    <StackPanel x:Name="spInvoiceDynamicFields" Margin="8,4,8,8" />
+                                </ScrollViewer>
+                            </GroupBox>
+
+                            <Border Grid.Row="5" Grid.ColumnSpan="4" BorderBrush="#DDD" BorderThickness="1" Padding="8" Margin="0,0,0,8">
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -195,12 +198,7 @@
                                             <ColumnDefinition Width="1*" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <ComboBox x:Name="cbItemProduct"
-                                                  Grid.Column="0"
-                                                  Margin="0,0,8,0"
-                                                  DisplayMemberPath="Name"
-                                                  SelectedValuePath="Id"
-                                                  SelectionChanged="CbItemProduct_SelectionChanged" />
+                                        <ComboBox x:Name="cbItemProduct" Grid.Column="0" Margin="0,0,8,0" DisplayMemberPath="Name" SelectedValuePath="Id" SelectionChanged="CbItemProduct_SelectionChanged" />
                                         <TextBox x:Name="txtItemQty" Grid.Column="1" Margin="0,0,8,0" Text="1" />
                                         <TextBox x:Name="txtItemUnitPrice" Grid.Column="2" Margin="0,0,8,0" Text="0" />
                                         <TextBox x:Name="txtItemDiscount" Grid.Column="3" Margin="0,0,8,0" Text="0" />
@@ -219,7 +217,7 @@
                                 </Grid>
                             </Border>
 
-                            <Grid Grid.Row="5" Grid.ColumnSpan="4" Margin="0,8,0,0">
+                            <Grid Grid.Row="6" Grid.ColumnSpan="4" Margin="0,8,0,0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
@@ -284,6 +282,11 @@
                                     <TextBox x:Name="txtProdTaxRate" Width="70" Margin="0,0,6,0" Text="7" />
                                     <CheckBox x:Name="chkProdActive" Content="Active" IsChecked="True" VerticalAlignment="Center" />
                                 </WrapPanel>
+                                <GroupBox Header="Product Dynamic Fields" Margin="0,0,0,6">
+                                    <ScrollViewer Height="120" VerticalScrollBarVisibility="Auto">
+                                        <StackPanel x:Name="spProductDynamicFields" Margin="8,4,8,8" />
+                                    </ScrollViewer>
+                                </GroupBox>
                                 <WrapPanel>
                                     <Button Content="New" Width="90" Margin="0,0,8,0" Click="NewProduct_Click" />
                                     <Button Content="Save" Width="90" Margin="0,0,8,0" Click="SaveProduct_Click" />
@@ -320,6 +323,11 @@
                                     <TextBox x:Name="txtCustAddress" Width="430" Margin="0,0,6,0" />
                                     <CheckBox x:Name="chkCustActive" Content="Active" IsChecked="True" VerticalAlignment="Center" />
                                 </WrapPanel>
+                                <GroupBox Header="Customer Dynamic Fields" Margin="0,0,0,6">
+                                    <ScrollViewer Height="120" VerticalScrollBarVisibility="Auto">
+                                        <StackPanel x:Name="spCustomerDynamicFields" Margin="8,4,8,8" />
+                                    </ScrollViewer>
+                                </GroupBox>
                                 <WrapPanel>
                                     <Button Content="New" Width="90" Margin="0,0,8,0" Click="NewCustomer_Click" />
                                     <Button Content="Save" Width="90" Margin="0,0,8,0" Click="SaveCustomer_Click" />
@@ -374,6 +382,68 @@
 
                     <GroupBox Grid.Row="2" Header="Import Log">
                         <TextBox x:Name="txtImportLog" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" AcceptsReturn="True" />
+                    </GroupBox>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Settings">
+                <Grid Margin="12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="2*" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <GroupBox Header="Dynamic Fields">
+                        <Grid Margin="8">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <WrapPanel Margin="0,0,0,8">
+                                <TextBlock Text="Entity" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                <ComboBox x:Name="cbDynamicEntity" Width="140" Margin="0,0,8,0" SelectionChanged="CbDynamicEntity_SelectionChanged" />
+                                <Button Content="Reload" Width="90" Margin="0,0,8,0" Click="ReloadDynamicFields_Click" />
+                                <Button Content="New" Width="90" Margin="0,0,8,0" Click="NewDynamicField_Click" />
+                                <Button Content="Save Field" Width="100" Margin="0,0,8,0" Click="SaveDynamicField_Click" />
+                                <Button Content="Delete Field" Width="100" Click="DeleteDynamicField_Click" />
+                            </WrapPanel>
+
+                            <DataGrid x:Name="dgDynamicFields" Grid.Row="1" AutoGenerateColumns="False" SelectionMode="Single" SelectionChanged="DgDynamicFields_SelectionChanged">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60" />
+                                    <DataGridTextColumn Header="Key" Binding="{Binding FieldKey}" Width="150" />
+                                    <DataGridTextColumn Header="Label" Binding="{Binding Label}" Width="*" />
+                                    <DataGridTextColumn Header="Type" Binding="{Binding DataType}" Width="90" />
+                                    <DataGridCheckBoxColumn Header="Req" Binding="{Binding IsRequired}" Width="60" />
+                                    <DataGridCheckBoxColumn Header="Visible" Binding="{Binding IsVisible}" Width="70" />
+                                    <DataGridCheckBoxColumn Header="PDF" Binding="{Binding ShowInPdf}" Width="60" />
+                                    <DataGridTextColumn Header="Sort" Binding="{Binding SortOrder}" Width="80" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+
+                            <WrapPanel Grid.Row="2" Margin="0,8,0,0">
+                                <TextBox x:Name="txtDynKey" Width="150" Margin="0,0,6,0" />
+                                <TextBox x:Name="txtDynLabel" Width="220" Margin="0,0,6,0" />
+                                <ComboBox x:Name="cbDynDataType" Width="110" Margin="0,0,6,0" />
+                                <TextBox x:Name="txtDynSort" Width="70" Margin="0,0,6,0" Text="0" />
+                                <CheckBox x:Name="chkDynRequired" Content="Required" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                <CheckBox x:Name="chkDynVisible" Content="Visible" IsChecked="True" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                <CheckBox x:Name="chkDynPdf" Content="Show in PDF" VerticalAlignment="Center" />
+                            </WrapPanel>
+                        </Grid>
+                    </GroupBox>
+
+                    <Separator Grid.Row="1" Margin="0,10" />
+
+                    <GroupBox Grid.Row="2" Header="Backup and Reset">
+                        <StackPanel Orientation="Horizontal" Margin="8">
+                            <Button Content="Export Backup JSON" Width="170" Margin="0,0,8,0" Click="ExportBackup_Click" />
+                            <Button Content="Import Backup JSON" Width="170" Margin="0,0,8,0" Click="ImportBackup_Click" />
+                            <Button Content="Hard Reset (Backup First)" Width="200" Click="HardReset_Click" />
+                        </StackPanel>
                     </GroupBox>
                 </Grid>
             </TabItem>

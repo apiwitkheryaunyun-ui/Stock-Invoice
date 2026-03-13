@@ -157,6 +157,8 @@ public sealed class InvoicePrintData
     public string CustomerPhone { get; set; } = string.Empty;
     public string CustomerEmail { get; set; } = string.Empty;
     public string CustomerAddress { get; set; } = string.Empty;
+    public Dictionary<string, string> CustomerCustomFields { get; set; } = new();
+    public Dictionary<string, string> InvoiceCustomFields { get; set; } = new();
     public List<InvoicePrintItem> Items { get; set; } = new();
 }
 
@@ -169,4 +171,61 @@ public sealed class InvoicePrintItem
     public decimal UnitPrice { get; set; }
     public decimal Discount { get; set; }
     public decimal LineTotal { get; set; }
+}
+
+public sealed class DynamicFieldDefinition
+{
+    public int Id { get; set; }
+    public string EntityType { get; set; } = "customer";
+    public string FieldKey { get; set; } = string.Empty;
+    public string Label { get; set; } = string.Empty;
+    public string DataType { get; set; } = "text";
+    public bool IsRequired { get; set; }
+    public bool IsVisible { get; set; } = true;
+    public bool ShowInPdf { get; set; }
+    public int SortOrder { get; set; }
+}
+
+public sealed class BackupPayload
+{
+    public List<ProductManageRow> Products { get; set; } = new();
+    public List<CustomerManageRow> Customers { get; set; } = new();
+    public List<InvoiceDetail> Invoices { get; set; } = new();
+    public List<InvoiceItemRowBackup> InvoiceItems { get; set; } = new();
+    public List<StockMovementBackup> StockMovements { get; set; } = new();
+    public List<DynamicFieldDefinition> DynamicFields { get; set; } = new();
+    public List<EntityFieldValue> DynamicValues { get; set; } = new();
+}
+
+public sealed class InvoiceItemRowBackup
+{
+    public int InvoiceId { get; set; }
+    public int LineNo { get; set; }
+    public int ProductId { get; set; }
+    public decimal Qty { get; set; }
+    public decimal UnitPrice { get; set; }
+    public decimal Discount { get; set; }
+    public decimal LineTotal { get; set; }
+}
+
+public sealed class EntityFieldValue
+{
+    public int Id { get; set; }
+    public string EntityType { get; set; } = "customer";
+    public int EntityId { get; set; }
+    public string FieldKey { get; set; } = string.Empty;
+    public string FieldValue { get; set; } = string.Empty;
+}
+
+public sealed class StockMovementBackup
+{
+    public int Id { get; set; }
+    public int ProductId { get; set; }
+    public string MovementType { get; set; } = "in";
+    public string RefType { get; set; } = "adjustment";
+    public int? RefId { get; set; }
+    public DateTime MovementDate { get; set; }
+    public decimal QtyChange { get; set; }
+    public decimal UnitCost { get; set; }
+    public string Note { get; set; } = string.Empty;
 }

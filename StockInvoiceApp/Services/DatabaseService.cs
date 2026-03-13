@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
+using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using StockInvoiceApp.Models;
 
@@ -23,6 +24,7 @@ public sealed class DatabaseService
     public void InitializeDatabase()
     {
         ExecuteSqlScript(Path.Combine(_env.WorkspaceRoot, "database", "sqlite", "01_schema.sql"));
+        EnsureDynamicTables();
 
         if (string.Equals(_env.Settings.AppMode, "demo", StringComparison.OrdinalIgnoreCase) && _env.Settings.Seeding.EnableDemoSeed)
         {
@@ -84,8 +86,7 @@ public sealed class DatabaseService
         using var conn = Open();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"SELECT id, sku, name, unit, sell_price, cost_price, tax_rate, stock_qty, is_active
-                            FROM products
-                            ORDER BY name;";
+                            FROM products ORDER BY name;";
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
         {
@@ -112,8 +113,7 @@ public sealed class DatabaseService
         using var conn = Open();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"SELECT id, code, name, tax_id, phone, email, address, is_active
-                            FROM customers
-                            ORDER BY name;";
+                            FROM customers ORDER BY name;";
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
         {
@@ -133,7 +133,7 @@ public sealed class DatabaseService
         return rows;
     }
 
-    public void SaveProduct(ProductManageRow product)
+    public int SaveProduct(ProductManageRow product)
     {
         if (string.IsNullOrWhiteSpace(product.Sku) || string.IsNullOrWhiteSpace(product.Name))
         {
@@ -142,11 +142,11 @@ public sealed class DatabaseService
 
         using var conn = Open();
         using var cmd = conn.CreateCommand();
-
         if (product.Id == 0)
         {
             cmd.CommandText = @"INSERT INTO products (sku, name, unit, sell_price, cost_price, tax_rate, stock_qty, is_active, created_at, updated_at)
-                                VALUES ($sku, $name, $unit, $sell, $cost, $tax, 0, $active, datetime('now'), datetime('now'));";
+                                VALUES ($sku, $name, $unit, $sell, $cost, $tax, 0, $active, datetime('now'), datetime('now'));
+                                SELECT last_insert_rowid();";
         }
         else
         {
@@ -159,7 +159,8 @@ public sealed class DatabaseService
                                     tax_rate = $tax,
                                     is_active = $active,
                                     updated_at = datetime('now')
-                                WHERE id = $id;";
+                                WHERE id = $id;
+                                SELECT $id;";
             cmd.Parameters.AddWithValue("$id", product.Id);
         }
 
@@ -171,10 +172,10 @@ public sealed class DatabaseService
         cmd.Parameters.AddWithValue("$tax", product.TaxRate <= 0 ? TaxRatePercent : product.TaxRate);
         cmd.Parameters.AddWithValue("$active", product.IsActive ? 1 : 0);
 
-        cmd.ExecuteNonQuery();
+        return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
     }
 
-    public void SaveCustomer(CustomerManageRow customer)
+    public int SaveCustomer(CustomerManageRow customer)
     {
         if (string.IsNullOrWhiteSpace(customer.Code) || string.IsNullOrWhiteSpace(customer.Name))
         {
@@ -183,11 +184,11 @@ public sealed class DatabaseService
 
         using var conn = Open();
         using var cmd = conn.CreateCommand();
-
         if (customer.Id == 0)
         {
             cmd.CommandText = @"INSERT INTO customers (code, name, tax_id, phone, email, address, is_active, created_at, updated_at)
-                                VALUES ($code, $name, $taxId, $phone, $email, $address, $active, datetime('now'), datetime('now'));";
+                                VALUES ($code, $name, $taxId, $phone, $email, $address, $active, datetime('now'), datetime('now'));
+                                SELECT last_insert_rowid();";
         }
         else
         {
@@ -200,7 +201,8 @@ public sealed class DatabaseService
                                     address = $address,
                                     is_active = $active,
                                     updated_at = datetime('now')
-                                WHERE id = $id;";
+                                WHERE id = $id;
+                                SELECT $id;";
             cmd.Parameters.AddWithValue("$id", customer.Id);
         }
 
@@ -212,7 +214,7 @@ public sealed class DatabaseService
         cmd.Parameters.AddWithValue("$address", string.IsNullOrWhiteSpace(customer.Address) ? (object)DBNull.Value : customer.Address.Trim());
         cmd.Parameters.AddWithValue("$active", customer.IsActive ? 1 : 0);
 
-        cmd.ExecuteNonQuery();
+        return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
     }
 
     public void DeleteProduct(int productId)
@@ -221,8 +223,7 @@ public sealed class DatabaseService
         using var check = conn.CreateCommand();
         check.CommandText = "SELECT COUNT(1) FROM invoice_items WHERE product_id = $id;";
         check.Parameters.AddWithValue("$id", productId);
-        var usedCount = Convert.ToInt32(check.ExecuteScalar(), CultureInfo.InvariantCulture);
-        if (usedCount > 0)
+        if (Convert.ToInt32(check.ExecuteScalar(), CultureInfo.InvariantCulture) > 0)
         {
             throw new InvalidOperationException("This product is already used in invoice history and cannot be deleted.");
         }
@@ -239,8 +240,7 @@ public sealed class DatabaseService
         using var check = conn.CreateCommand();
         check.CommandText = "SELECT COUNT(1) FROM invoices WHERE customer_id = $id;";
         check.Parameters.AddWithValue("$id", customerId);
-        var usedCount = Convert.ToInt32(check.ExecuteScalar(), CultureInfo.InvariantCulture);
-        if (usedCount > 0)
+        if (Convert.ToInt32(check.ExecuteScalar(), CultureInfo.InvariantCulture) > 0)
         {
             throw new InvalidOperationException("This customer is already used in invoice history and cannot be deleted.");
         }
@@ -258,11 +258,6 @@ public sealed class DatabaseService
             throw new InvalidOperationException("Stock adjustment qty cannot be zero.");
         }
 
-        if (unitCost < 0)
-        {
-            throw new InvalidOperationException("Unit cost cannot be negative.");
-        }
-
         using var conn = Open();
         using var tx = conn.BeginTransaction();
 
@@ -270,30 +265,16 @@ public sealed class DatabaseService
         {
             cmd.Transaction = tx;
             cmd.CommandText = @"INSERT INTO stock_movements (product_id, movement_type, ref_type, ref_id, movement_date, qty_change, unit_cost, note, created_at, updated_at)
-                                VALUES ($pid, $movementType, 'adjustment', NULL, date('now'), $qtyChange, $unitCost, $note, datetime('now'), datetime('now'));";
+                                VALUES ($pid, $type, 'adjustment', NULL, date('now'), $qty, $cost, $note, datetime('now'), datetime('now'));";
             cmd.Parameters.AddWithValue("$pid", productId);
-            cmd.Parameters.AddWithValue("$movementType", qtyChange > 0 ? "in" : "out");
-            cmd.Parameters.AddWithValue("$qtyChange", qtyChange);
-            cmd.Parameters.AddWithValue("$unitCost", unitCost);
+            cmd.Parameters.AddWithValue("$type", qtyChange > 0 ? "in" : "out");
+            cmd.Parameters.AddWithValue("$qty", qtyChange);
+            cmd.Parameters.AddWithValue("$cost", unitCost < 0 ? 0 : unitCost);
             cmd.Parameters.AddWithValue("$note", string.IsNullOrWhiteSpace(note) ? "Manual stock adjustment" : note.Trim());
             cmd.ExecuteNonQuery();
         }
 
-        using (var update = conn.CreateCommand())
-        {
-            update.Transaction = tx;
-            update.CommandText = @"UPDATE products
-                                  SET stock_qty = (
-                                      SELECT IFNULL(ROUND(SUM(sm.qty_change), 2), 0)
-                                      FROM stock_movements sm
-                                      WHERE sm.product_id = products.id
-                                  ),
-                                  updated_at = datetime('now')
-                                  WHERE id = $id;";
-            update.Parameters.AddWithValue("$id", productId);
-            update.ExecuteNonQuery();
-        }
-
+        RecalculateProductsStock(conn, tx, new[] { productId });
         tx.Commit();
     }
 
@@ -326,7 +307,6 @@ public sealed class DatabaseService
     public (InvoiceDetail invoice, ObservableCollection<InvoiceItemRow> items) GetInvoiceWithItems(int invoiceId)
     {
         using var conn = Open();
-
         InvoiceDetail invoice;
         using (var cmd = conn.CreateCommand())
         {
@@ -442,6 +422,9 @@ public sealed class DatabaseService
             }
         }
 
+        data.CustomerCustomFields = GetEntityFieldValuesForPdf("customer", data.CustomerId);
+        data.InvoiceCustomFields = GetEntityFieldValuesForPdf("invoice", data.InvoiceId);
+
         return data;
     }
 
@@ -457,12 +440,12 @@ public sealed class DatabaseService
 
         if (invoice.Id > 0)
         {
-            using var lockCheck = conn.CreateCommand();
-            lockCheck.Transaction = tx;
-            lockCheck.CommandText = "SELECT status FROM invoices WHERE id = $id;";
-            lockCheck.Parameters.AddWithValue("$id", invoice.Id);
-            var currentStatus = lockCheck.ExecuteScalar()?.ToString() ?? string.Empty;
-            if (string.Equals(currentStatus, "paid", StringComparison.OrdinalIgnoreCase))
+            using var check = conn.CreateCommand();
+            check.Transaction = tx;
+            check.CommandText = "SELECT status FROM invoices WHERE id = $id;";
+            check.Parameters.AddWithValue("$id", invoice.Id);
+            var status = check.ExecuteScalar()?.ToString() ?? string.Empty;
+            if (string.Equals(status, "paid", StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException("Paid invoice cannot be modified.");
             }
@@ -568,7 +551,6 @@ public sealed class DatabaseService
         }
 
         RecalculateProductsStock(conn, tx, productIds);
-
         tx.Commit();
         return invoice.Id;
     }
@@ -603,12 +585,20 @@ public sealed class DatabaseService
             }
         }
 
-        using (var deleteMovements = conn.CreateCommand())
+        using (var deleteMoves = conn.CreateCommand())
         {
-            deleteMovements.Transaction = tx;
-            deleteMovements.CommandText = "DELETE FROM stock_movements WHERE ref_type = 'sale' AND ref_id = $id;";
-            deleteMovements.Parameters.AddWithValue("$id", invoiceId);
-            deleteMovements.ExecuteNonQuery();
+            deleteMoves.Transaction = tx;
+            deleteMoves.CommandText = "DELETE FROM stock_movements WHERE ref_type = 'sale' AND ref_id = $id;";
+            deleteMoves.Parameters.AddWithValue("$id", invoiceId);
+            deleteMoves.ExecuteNonQuery();
+        }
+
+        using (var deleteItems = conn.CreateCommand())
+        {
+            deleteItems.Transaction = tx;
+            deleteItems.CommandText = "DELETE FROM invoice_items WHERE invoice_id = $id;";
+            deleteItems.Parameters.AddWithValue("$id", invoiceId);
+            deleteItems.ExecuteNonQuery();
         }
 
         using (var deleteInvoice = conn.CreateCommand())
@@ -617,6 +607,14 @@ public sealed class DatabaseService
             deleteInvoice.CommandText = "DELETE FROM invoices WHERE id = $id;";
             deleteInvoice.Parameters.AddWithValue("$id", invoiceId);
             deleteInvoice.ExecuteNonQuery();
+        }
+
+        using (var clearCustom = conn.CreateCommand())
+        {
+            clearCustom.Transaction = tx;
+            clearCustom.CommandText = "DELETE FROM dynamic_field_values WHERE entity_type = 'invoice' AND entity_id = $id;";
+            clearCustom.Parameters.AddWithValue("$id", invoiceId);
+            clearCustom.ExecuteNonQuery();
         }
 
         RecalculateProductsStock(conn, tx, productIds);
@@ -689,10 +687,351 @@ public sealed class DatabaseService
         return count;
     }
 
+    public List<DynamicFieldDefinition> GetDynamicFieldDefinitions(string entityType)
+    {
+        var rows = new List<DynamicFieldDefinition>();
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"SELECT id, entity_type, field_key, label, data_type, is_required, is_visible, show_in_pdf, sort_order
+                            FROM dynamic_field_defs
+                            WHERE entity_type = $type
+                            ORDER BY sort_order, id;";
+        cmd.Parameters.AddWithValue("$type", entityType);
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            rows.Add(new DynamicFieldDefinition
+            {
+                Id = reader.GetInt32(0),
+                EntityType = reader.GetString(1),
+                FieldKey = reader.GetString(2),
+                Label = reader.GetString(3),
+                DataType = reader.GetString(4),
+                IsRequired = reader.GetInt32(5) == 1,
+                IsVisible = reader.GetInt32(6) == 1,
+                ShowInPdf = reader.GetInt32(7) == 1,
+                SortOrder = reader.GetInt32(8)
+            });
+        }
+
+        return rows;
+    }
+
+    public int SaveDynamicFieldDefinition(DynamicFieldDefinition field)
+    {
+        if (string.IsNullOrWhiteSpace(field.EntityType) || string.IsNullOrWhiteSpace(field.FieldKey) || string.IsNullOrWhiteSpace(field.Label))
+        {
+            throw new InvalidOperationException("Entity type, field key and label are required.");
+        }
+
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        if (field.Id == 0)
+        {
+            cmd.CommandText = @"INSERT INTO dynamic_field_defs (entity_type, field_key, label, data_type, is_required, is_visible, show_in_pdf, sort_order, created_at, updated_at)
+                                VALUES ($type, $key, $label, $dtype, $req, $visible, $pdf, $order, datetime('now'), datetime('now'));
+                                SELECT last_insert_rowid();";
+        }
+        else
+        {
+            cmd.CommandText = @"UPDATE dynamic_field_defs
+                                SET entity_type = $type,
+                                    field_key = $key,
+                                    label = $label,
+                                    data_type = $dtype,
+                                    is_required = $req,
+                                    is_visible = $visible,
+                                    show_in_pdf = $pdf,
+                                    sort_order = $order,
+                                    updated_at = datetime('now')
+                                WHERE id = $id;
+                                SELECT $id;";
+            cmd.Parameters.AddWithValue("$id", field.Id);
+        }
+
+        cmd.Parameters.AddWithValue("$type", field.EntityType.Trim().ToLowerInvariant());
+        cmd.Parameters.AddWithValue("$key", field.FieldKey.Trim().ToLowerInvariant());
+        cmd.Parameters.AddWithValue("$label", field.Label.Trim());
+        cmd.Parameters.AddWithValue("$dtype", string.IsNullOrWhiteSpace(field.DataType) ? "text" : field.DataType.Trim().ToLowerInvariant());
+        cmd.Parameters.AddWithValue("$req", field.IsRequired ? 1 : 0);
+        cmd.Parameters.AddWithValue("$visible", field.IsVisible ? 1 : 0);
+        cmd.Parameters.AddWithValue("$pdf", field.ShowInPdf ? 1 : 0);
+        cmd.Parameters.AddWithValue("$order", field.SortOrder);
+
+        return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
+    }
+
+    public void DeleteDynamicFieldDefinition(int fieldId)
+    {
+        using var conn = Open();
+        using var tx = conn.BeginTransaction();
+
+        string fieldKey;
+        string entityType;
+        using (var getCmd = conn.CreateCommand())
+        {
+            getCmd.Transaction = tx;
+            getCmd.CommandText = "SELECT entity_type, field_key FROM dynamic_field_defs WHERE id = $id;";
+            getCmd.Parameters.AddWithValue("$id", fieldId);
+            using var reader = getCmd.ExecuteReader();
+            if (!reader.Read())
+            {
+                tx.Rollback();
+                return;
+            }
+
+            entityType = reader.GetString(0);
+            fieldKey = reader.GetString(1);
+        }
+
+        using (var delVals = conn.CreateCommand())
+        {
+            delVals.Transaction = tx;
+            delVals.CommandText = "DELETE FROM dynamic_field_values WHERE entity_type = $type AND field_key = $key;";
+            delVals.Parameters.AddWithValue("$type", entityType);
+            delVals.Parameters.AddWithValue("$key", fieldKey);
+            delVals.ExecuteNonQuery();
+        }
+
+        using (var delDef = conn.CreateCommand())
+        {
+            delDef.Transaction = tx;
+            delDef.CommandText = "DELETE FROM dynamic_field_defs WHERE id = $id;";
+            delDef.Parameters.AddWithValue("$id", fieldId);
+            delDef.ExecuteNonQuery();
+        }
+
+        tx.Commit();
+    }
+
+    public Dictionary<string, string> GetEntityFieldValues(string entityType, int entityId)
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"SELECT field_key, field_value
+                            FROM dynamic_field_values
+                            WHERE entity_type = $type AND entity_id = $id;";
+        cmd.Parameters.AddWithValue("$type", entityType);
+        cmd.Parameters.AddWithValue("$id", entityId);
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            map[reader.GetString(0)] = reader.IsDBNull(1) ? string.Empty : reader.GetString(1);
+        }
+
+        return map;
+    }
+
+    public void SaveEntityFieldValues(string entityType, int entityId, Dictionary<string, string> values)
+    {
+        using var conn = Open();
+        using var tx = conn.BeginTransaction();
+
+        using (var del = conn.CreateCommand())
+        {
+            del.Transaction = tx;
+            del.CommandText = "DELETE FROM dynamic_field_values WHERE entity_type = $type AND entity_id = $id;";
+            del.Parameters.AddWithValue("$type", entityType);
+            del.Parameters.AddWithValue("$id", entityId);
+            del.ExecuteNonQuery();
+        }
+
+        foreach (var item in values)
+        {
+            using var ins = conn.CreateCommand();
+            ins.Transaction = tx;
+            ins.CommandText = @"INSERT INTO dynamic_field_values (entity_type, entity_id, field_key, field_value, created_at, updated_at)
+                                VALUES ($type, $id, $key, $value, datetime('now'), datetime('now'));";
+            ins.Parameters.AddWithValue("$type", entityType);
+            ins.Parameters.AddWithValue("$id", entityId);
+            ins.Parameters.AddWithValue("$key", item.Key);
+            ins.Parameters.AddWithValue("$value", item.Value ?? string.Empty);
+            ins.ExecuteNonQuery();
+        }
+
+        tx.Commit();
+    }
+
+    public void ExportBackup(string outputPath)
+    {
+        var payload = BuildBackupPayload();
+        File.WriteAllText(outputPath, JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }));
+    }
+
+    public void ImportBackup(string inputPath)
+    {
+        if (!File.Exists(inputPath))
+        {
+            throw new FileNotFoundException("Backup file not found.", inputPath);
+        }
+
+        var json = File.ReadAllText(inputPath);
+        var payload = JsonSerializer.Deserialize<BackupPayload>(json, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
+
+        if (payload is null)
+        {
+            throw new InvalidOperationException("Backup file format is invalid.");
+        }
+
+        using var conn = Open();
+        using var tx = conn.BeginTransaction();
+
+        ExecuteDelete(conn, tx, "DELETE FROM stock_movements;");
+        ExecuteDelete(conn, tx, "DELETE FROM invoice_items;");
+        ExecuteDelete(conn, tx, "DELETE FROM invoices;");
+        ExecuteDelete(conn, tx, "DELETE FROM dynamic_field_values;");
+        ExecuteDelete(conn, tx, "DELETE FROM dynamic_field_defs;");
+        ExecuteDelete(conn, tx, "DELETE FROM customers;");
+        ExecuteDelete(conn, tx, "DELETE FROM products;");
+
+        foreach (var p in payload.Products)
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.Transaction = tx;
+            cmd.CommandText = @"INSERT INTO products (id, sku, name, unit, sell_price, cost_price, tax_rate, stock_qty, is_active, created_at, updated_at)
+                                VALUES ($id, $sku, $name, $unit, $sell, $cost, $tax, $stock, $active, datetime('now'), datetime('now'));";
+            cmd.Parameters.AddWithValue("$id", p.Id);
+            cmd.Parameters.AddWithValue("$sku", p.Sku);
+            cmd.Parameters.AddWithValue("$name", p.Name);
+            cmd.Parameters.AddWithValue("$unit", p.Unit);
+            cmd.Parameters.AddWithValue("$sell", p.SellPrice);
+            cmd.Parameters.AddWithValue("$cost", p.CostPrice);
+            cmd.Parameters.AddWithValue("$tax", p.TaxRate);
+            cmd.Parameters.AddWithValue("$stock", p.StockQty);
+            cmd.Parameters.AddWithValue("$active", p.IsActive ? 1 : 0);
+            cmd.ExecuteNonQuery();
+        }
+
+        foreach (var c in payload.Customers)
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.Transaction = tx;
+            cmd.CommandText = @"INSERT INTO customers (id, code, name, tax_id, phone, email, address, is_active, created_at, updated_at)
+                                VALUES ($id, $code, $name, $taxId, $phone, $email, $address, $active, datetime('now'), datetime('now'));";
+            cmd.Parameters.AddWithValue("$id", c.Id);
+            cmd.Parameters.AddWithValue("$code", c.Code);
+            cmd.Parameters.AddWithValue("$name", c.Name);
+            cmd.Parameters.AddWithValue("$taxId", string.IsNullOrWhiteSpace(c.TaxId) ? (object)DBNull.Value : c.TaxId);
+            cmd.Parameters.AddWithValue("$phone", string.IsNullOrWhiteSpace(c.Phone) ? (object)DBNull.Value : c.Phone);
+            cmd.Parameters.AddWithValue("$email", string.IsNullOrWhiteSpace(c.Email) ? (object)DBNull.Value : c.Email);
+            cmd.Parameters.AddWithValue("$address", string.IsNullOrWhiteSpace(c.Address) ? (object)DBNull.Value : c.Address);
+            cmd.Parameters.AddWithValue("$active", c.IsActive ? 1 : 0);
+            cmd.ExecuteNonQuery();
+        }
+
+        foreach (var inv in payload.Invoices)
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.Transaction = tx;
+            cmd.CommandText = @"INSERT INTO invoices (id, invoice_no, customer_id, invoice_date, due_date, subtotal, tax_total, grand_total, status, notes, created_at, updated_at)
+                                VALUES ($id, $no, $cid, $date, $due, $sub, $tax, $grand, $status, $notes, datetime('now'), datetime('now'));";
+            cmd.Parameters.AddWithValue("$id", inv.Id);
+            cmd.Parameters.AddWithValue("$no", inv.InvoiceNo);
+            cmd.Parameters.AddWithValue("$cid", inv.CustomerId);
+            cmd.Parameters.AddWithValue("$date", inv.InvoiceDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+            cmd.Parameters.AddWithValue("$due", inv.DueDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("$sub", inv.Subtotal);
+            cmd.Parameters.AddWithValue("$tax", inv.TaxTotal);
+            cmd.Parameters.AddWithValue("$grand", inv.GrandTotal);
+            cmd.Parameters.AddWithValue("$status", inv.Status);
+            cmd.Parameters.AddWithValue("$notes", string.IsNullOrWhiteSpace(inv.Notes) ? (object)DBNull.Value : inv.Notes);
+            cmd.ExecuteNonQuery();
+        }
+
+        foreach (var item in payload.InvoiceItems)
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.Transaction = tx;
+            cmd.CommandText = @"INSERT INTO invoice_items (invoice_id, line_no, product_id, qty, unit_price, discount, line_total, created_at, updated_at)
+                                VALUES ($invoiceId, $lineNo, $productId, $qty, $price, $discount, $lineTotal, datetime('now'), datetime('now'));";
+            cmd.Parameters.AddWithValue("$invoiceId", item.InvoiceId);
+            cmd.Parameters.AddWithValue("$lineNo", item.LineNo);
+            cmd.Parameters.AddWithValue("$productId", item.ProductId);
+            cmd.Parameters.AddWithValue("$qty", item.Qty);
+            cmd.Parameters.AddWithValue("$price", item.UnitPrice);
+            cmd.Parameters.AddWithValue("$discount", item.Discount);
+            cmd.Parameters.AddWithValue("$lineTotal", item.LineTotal);
+            cmd.ExecuteNonQuery();
+        }
+
+        foreach (var sm in payload.StockMovements)
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.Transaction = tx;
+            cmd.CommandText = @"INSERT INTO stock_movements (id, product_id, movement_type, ref_type, ref_id, movement_date, qty_change, unit_cost, note, created_at, updated_at)
+                                VALUES ($id, $pid, $type, $refType, $refId, $mdate, $qty, $cost, $note, datetime('now'), datetime('now'));";
+            cmd.Parameters.AddWithValue("$id", sm.Id);
+            cmd.Parameters.AddWithValue("$pid", sm.ProductId);
+            cmd.Parameters.AddWithValue("$type", sm.MovementType);
+            cmd.Parameters.AddWithValue("$refType", sm.RefType);
+            cmd.Parameters.AddWithValue("$refId", sm.RefId ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("$mdate", sm.MovementDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+            cmd.Parameters.AddWithValue("$qty", sm.QtyChange);
+            cmd.Parameters.AddWithValue("$cost", sm.UnitCost);
+            cmd.Parameters.AddWithValue("$note", sm.Note);
+            cmd.ExecuteNonQuery();
+        }
+
+        foreach (var d in payload.DynamicFields)
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.Transaction = tx;
+            cmd.CommandText = @"INSERT INTO dynamic_field_defs (id, entity_type, field_key, label, data_type, is_required, is_visible, show_in_pdf, sort_order, created_at, updated_at)
+                                VALUES ($id, $entityType, $fieldKey, $label, $dataType, $isRequired, $isVisible, $showInPdf, $sortOrder, datetime('now'), datetime('now'));";
+            cmd.Parameters.AddWithValue("$id", d.Id);
+            cmd.Parameters.AddWithValue("$entityType", d.EntityType);
+            cmd.Parameters.AddWithValue("$fieldKey", d.FieldKey);
+            cmd.Parameters.AddWithValue("$label", d.Label);
+            cmd.Parameters.AddWithValue("$dataType", d.DataType);
+            cmd.Parameters.AddWithValue("$isRequired", d.IsRequired ? 1 : 0);
+            cmd.Parameters.AddWithValue("$isVisible", d.IsVisible ? 1 : 0);
+            cmd.Parameters.AddWithValue("$showInPdf", d.ShowInPdf ? 1 : 0);
+            cmd.Parameters.AddWithValue("$sortOrder", d.SortOrder);
+            cmd.ExecuteNonQuery();
+        }
+
+        foreach (var v in payload.DynamicValues)
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.Transaction = tx;
+            cmd.CommandText = @"INSERT INTO dynamic_field_values (id, entity_type, entity_id, field_key, field_value, created_at, updated_at)
+                                VALUES ($id, $entityType, $entityId, $fieldKey, $fieldValue, datetime('now'), datetime('now'));";
+            cmd.Parameters.AddWithValue("$id", v.Id);
+            cmd.Parameters.AddWithValue("$entityType", v.EntityType);
+            cmd.Parameters.AddWithValue("$entityId", v.EntityId);
+            cmd.Parameters.AddWithValue("$fieldKey", v.FieldKey);
+            cmd.Parameters.AddWithValue("$fieldValue", v.FieldValue);
+            cmd.ExecuteNonQuery();
+        }
+
+        var productIds = payload.Products.ConvertAll(x => x.Id);
+        RecalculateProductsStock(conn, tx, productIds);
+        tx.Commit();
+    }
+
+    public void HardResetBusinessData()
+    {
+        using var conn = Open();
+        using var tx = conn.BeginTransaction();
+
+        ExecuteDelete(conn, tx, "DELETE FROM stock_movements;");
+        ExecuteDelete(conn, tx, "DELETE FROM invoice_items;");
+        ExecuteDelete(conn, tx, "DELETE FROM invoices;");
+        ExecuteDelete(conn, tx, "DELETE FROM dynamic_field_values;");
+        ExecuteDelete(conn, tx, "DELETE FROM customers;");
+        ExecuteDelete(conn, tx, "DELETE FROM products;");
+        ExecuteDelete(conn, tx, "DELETE FROM sqlite_sequence WHERE name IN ('stock_movements','invoice_items','invoices','customers','products','dynamic_field_values');");
+
+        tx.Commit();
+    }
+
     public DashboardMetrics GetDashboardMetrics(DateTime? fromDate = null, DateTime? toDate = null, decimal lowStockThreshold = 10)
     {
         using var conn = Open();
-
         var metrics = new DashboardMetrics();
 
         using (var cmd = conn.CreateCommand())
@@ -855,6 +1194,199 @@ public sealed class DatabaseService
         return points;
     }
 
+    private Dictionary<string, string> GetEntityFieldValuesForPdf(string entityType, int entityId)
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"SELECT d.label, IFNULL(v.field_value, '')
+                            FROM dynamic_field_defs d
+                            LEFT JOIN dynamic_field_values v
+                                   ON v.entity_type = d.entity_type
+                                  AND v.field_key = d.field_key
+                                  AND v.entity_id = $entityId
+                            WHERE d.entity_type = $type
+                              AND d.show_in_pdf = 1
+                              AND d.is_visible = 1
+                            ORDER BY d.sort_order, d.id;";
+        cmd.Parameters.AddWithValue("$entityId", entityId);
+        cmd.Parameters.AddWithValue("$type", entityType);
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            result[reader.GetString(0)] = reader.IsDBNull(1) ? string.Empty : reader.GetString(1);
+        }
+
+        return result;
+    }
+
+    private BackupPayload BuildBackupPayload()
+    {
+        using var conn = Open();
+        var payload = new BackupPayload
+        {
+            Products = GetManageProducts(),
+            Customers = GetManageCustomers(),
+            DynamicFields = GetAllDynamicFieldDefinitions(conn),
+            DynamicValues = GetAllDynamicFieldValues(conn)
+        };
+
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = @"SELECT id, invoice_no, customer_id, invoice_date, due_date, status, notes, subtotal, tax_total, grand_total
+                                FROM invoices
+                                ORDER BY id;";
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                payload.Invoices.Add(new InvoiceDetail
+                {
+                    Id = reader.GetInt32(0),
+                    InvoiceNo = reader.GetString(1),
+                    CustomerId = reader.GetInt32(2),
+                    InvoiceDate = DateTime.Parse(reader.GetString(3), CultureInfo.InvariantCulture),
+                    DueDate = reader.IsDBNull(4) ? null : DateTime.Parse(reader.GetString(4), CultureInfo.InvariantCulture),
+                    Status = reader.GetString(5),
+                    Notes = reader.IsDBNull(6) ? string.Empty : reader.GetString(6),
+                    Subtotal = reader.GetDecimal(7),
+                    TaxTotal = reader.GetDecimal(8),
+                    GrandTotal = reader.GetDecimal(9)
+                });
+            }
+        }
+
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = @"SELECT invoice_id, line_no, product_id, qty, unit_price, discount, line_total
+                                FROM invoice_items
+                                ORDER BY invoice_id, line_no;";
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                payload.InvoiceItems.Add(new InvoiceItemRowBackup
+                {
+                    InvoiceId = reader.GetInt32(0),
+                    LineNo = reader.GetInt32(1),
+                    ProductId = reader.GetInt32(2),
+                    Qty = reader.GetDecimal(3),
+                    UnitPrice = reader.GetDecimal(4),
+                    Discount = reader.GetDecimal(5),
+                    LineTotal = reader.GetDecimal(6)
+                });
+            }
+        }
+
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = @"SELECT id, product_id, movement_type, ref_type, ref_id, movement_date, qty_change, unit_cost, note
+                                FROM stock_movements
+                                ORDER BY id;";
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                payload.StockMovements.Add(new StockMovementBackup
+                {
+                    Id = reader.GetInt32(0),
+                    ProductId = reader.GetInt32(1),
+                    MovementType = reader.GetString(2),
+                    RefType = reader.GetString(3),
+                    RefId = reader.IsDBNull(4) ? null : reader.GetInt32(4),
+                    MovementDate = DateTime.Parse(reader.GetString(5), CultureInfo.InvariantCulture),
+                    QtyChange = reader.GetDecimal(6),
+                    UnitCost = reader.GetDecimal(7),
+                    Note = reader.IsDBNull(8) ? string.Empty : reader.GetString(8)
+                });
+            }
+        }
+
+        return payload;
+    }
+
+    private static List<DynamicFieldDefinition> GetAllDynamicFieldDefinitions(SqliteConnection conn)
+    {
+        var rows = new List<DynamicFieldDefinition>();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"SELECT id, entity_type, field_key, label, data_type, is_required, is_visible, show_in_pdf, sort_order
+                            FROM dynamic_field_defs
+                            ORDER BY entity_type, sort_order, id;";
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            rows.Add(new DynamicFieldDefinition
+            {
+                Id = reader.GetInt32(0),
+                EntityType = reader.GetString(1),
+                FieldKey = reader.GetString(2),
+                Label = reader.GetString(3),
+                DataType = reader.GetString(4),
+                IsRequired = reader.GetInt32(5) == 1,
+                IsVisible = reader.GetInt32(6) == 1,
+                ShowInPdf = reader.GetInt32(7) == 1,
+                SortOrder = reader.GetInt32(8)
+            });
+        }
+
+        return rows;
+    }
+
+    private static List<EntityFieldValue> GetAllDynamicFieldValues(SqliteConnection conn)
+    {
+        var rows = new List<EntityFieldValue>();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"SELECT id, entity_type, entity_id, field_key, IFNULL(field_value, '')
+                            FROM dynamic_field_values
+                            ORDER BY entity_type, entity_id, field_key;";
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            rows.Add(new EntityFieldValue
+            {
+                Id = reader.GetInt32(0),
+                EntityType = reader.GetString(1),
+                EntityId = reader.GetInt32(2),
+                FieldKey = reader.GetString(3),
+                FieldValue = reader.GetString(4)
+            });
+        }
+
+        return rows;
+    }
+
+    private void EnsureDynamicTables()
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            CREATE TABLE IF NOT EXISTS dynamic_field_defs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                entity_type TEXT NOT NULL CHECK (entity_type IN ('customer', 'product', 'invoice')),
+                field_key TEXT NOT NULL,
+                label TEXT NOT NULL,
+                data_type TEXT NOT NULL DEFAULT 'text' CHECK (data_type IN ('text', 'number', 'date', 'boolean', 'image')),
+                is_required INTEGER NOT NULL DEFAULT 0 CHECK (is_required IN (0,1)),
+                is_visible INTEGER NOT NULL DEFAULT 1 CHECK (is_visible IN (0,1)),
+                show_in_pdf INTEGER NOT NULL DEFAULT 0 CHECK (show_in_pdf IN (0,1)),
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+                UNIQUE(entity_type, field_key)
+            );
+            CREATE TABLE IF NOT EXISTS dynamic_field_values (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                entity_type TEXT NOT NULL CHECK (entity_type IN ('customer', 'product', 'invoice')),
+                entity_id INTEGER NOT NULL,
+                field_key TEXT NOT NULL,
+                field_value TEXT,
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+                UNIQUE(entity_type, entity_id, field_key)
+            );
+            CREATE INDEX IF NOT EXISTS idx_dyn_vals_entity ON dynamic_field_values(entity_type, entity_id);
+            CREATE INDEX IF NOT EXISTS idx_dyn_defs_entity ON dynamic_field_defs(entity_type);
+        ";
+        cmd.ExecuteNonQuery();
+    }
+
     private static void AppendDateFilter(SqliteCommand cmd, string column, DateTime? fromDate, DateTime? toDate, bool includeWhere)
     {
         var hasFrom = fromDate.HasValue;
@@ -897,6 +1429,14 @@ public sealed class DatabaseService
         }
     }
 
+    private static void ExecuteDelete(SqliteConnection conn, SqliteTransaction tx, string sql)
+    {
+        using var cmd = conn.CreateCommand();
+        cmd.Transaction = tx;
+        cmd.CommandText = sql;
+        cmd.ExecuteNonQuery();
+    }
+
     private SqliteConnection Open()
     {
         var conn = new SqliteConnection(_env.ConnectionString);
@@ -915,7 +1455,6 @@ public sealed class DatabaseService
         }
 
         var sql = File.ReadAllText(path);
-
         using var conn = Open();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = sql;

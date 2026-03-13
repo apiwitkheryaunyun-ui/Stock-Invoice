@@ -22,6 +22,10 @@ namespace StockInvoiceApp
         private readonly InvoicePdfService _invoicePdf;
 
         private readonly ObservableCollection<InvoiceItemRow> _invoiceItems = new();
+        private readonly Dictionary<string, FrameworkElement> _productDynamicInputs = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, FrameworkElement> _customerDynamicInputs = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, FrameworkElement> _invoiceDynamicInputs = new(StringComparer.OrdinalIgnoreCase);
+
         private List<ProductLookup> _products = new();
         private List<CustomerLookup> _customers = new();
         private List<StockLevelRow> _stockRows = new();
@@ -31,6 +35,7 @@ namespace StockInvoiceApp
         private int _editingInvoiceId;
         private int _editingProductId;
         private int _editingCustomerId;
+        private int _editingDynamicFieldId;
         private bool _invoiceLocked;
 
         public MainWindow(DatabaseService db, CsvImportService csvImport, PdfReportService pdfReport, InvoicePdfService invoicePdf)
@@ -48,6 +53,10 @@ namespace StockInvoiceApp
             txtMode.Text = $"Mode: {_db.AppMode.ToUpperInvariant()}";
             cbStatus.ItemsSource = new[] { "draft", "issued", "paid", "cancelled" };
             cbStatus.SelectedItem = "issued";
+            cbDynDataType.ItemsSource = new[] { "text", "number", "date", "boolean", "image" };
+            cbDynDataType.SelectedItem = "text";
+            cbDynamicEntity.ItemsSource = new[] { "customer", "product", "invoice" };
+            cbDynamicEntity.SelectedIndex = 0;
             dgItems.ItemsSource = _invoiceItems;
 
             ReloadLookups();
@@ -57,6 +66,8 @@ namespace StockInvoiceApp
             RefreshDashboard();
             NewProductForm();
             NewCustomerForm();
+            ReloadDynamicFields();
+            ReloadAllDynamicInputPanels();
         }
 
         private void ReloadLookups()
@@ -96,6 +107,7 @@ namespace StockInvoiceApp
             txtNotes.Text = string.Empty;
             _invoiceItems.Clear();
             RecalculateTotals();
+            RenderDynamicInputs("invoice", spInvoiceDynamicFields, _invoiceDynamicInputs, new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
             ApplyInvoiceLock(false, string.Empty);
         }
 
@@ -115,6 +127,11 @@ namespace StockInvoiceApp
             btnAddLine.IsEnabled = !isLocked;
             btnRemoveLine.IsEnabled = !isLocked;
             btnSaveInvoice.IsEnabled = !isLocked;
+
+            foreach (var input in _invoiceDynamicInputs.Values)
+            {
+                input.IsEnabled = !isLocked;
+            }
 
             btnDeleteInvoice.IsEnabled = !string.Equals(status, "paid", StringComparison.OrdinalIgnoreCase);
             txtInvoiceLockStatus.Text = isLocked ? "This invoice is PAID and locked. Editing/deleting is disabled." : string.Empty;
@@ -257,6 +274,9 @@ namespace StockInvoiceApp
 
                 var invoice = BuildInvoiceFromForm();
                 var savedId = _db.SaveInvoice(invoice, _invoiceItems);
+                var dynamicValues = CollectDynamicValues(_invoiceDynamicInputs);
+                _db.SaveEntityFieldValues("invoice", savedId, dynamicValues);
+
                 ReloadInvoices();
                 ReloadLookups();
                 ReloadMasterData();
@@ -364,6 +384,9 @@ namespace StockInvoiceApp
                 {
                     _invoiceItems.Add(item);
                 }
+
+                var dynamicValues = _db.GetEntityFieldValues("invoice", invoice.Id);
+                RenderDynamicInputs("invoice", spInvoiceDynamicFields, _invoiceDynamicInputs, dynamicValues);
 
                 RecalculateTotals();
                 ApplyInvoiceLock(string.Equals(invoice.Status, "paid", StringComparison.OrdinalIgnoreCase), invoice.Status);
@@ -569,6 +592,7 @@ namespace StockInvoiceApp
             txtProdCostPrice.Text = "0";
             txtProdTaxRate.Text = "7";
             chkProdActive.IsChecked = true;
+            RenderDynamicInputs("product", spProductDynamicFields, _productDynamicInputs, new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
         }
 
         private void NewProduct_Click(object sender, RoutedEventArgs e)
@@ -592,7 +616,9 @@ namespace StockInvoiceApp
                     IsActive = chkProdActive.IsChecked == true
                 };
 
-                _db.SaveProduct(product);
+                var savedId = _db.SaveProduct(product);
+                _db.SaveEntityFieldValues("product", savedId, CollectDynamicValues(_productDynamicInputs));
+
                 ReloadLookups();
                 ReloadMasterData();
                 RefreshDashboard();
@@ -647,6 +673,8 @@ namespace StockInvoiceApp
             txtProdCostPrice.Text = row.CostPrice.ToString("0.##", CultureInfo.InvariantCulture);
             txtProdTaxRate.Text = row.TaxRate.ToString("0.##", CultureInfo.InvariantCulture);
             chkProdActive.IsChecked = row.IsActive;
+            var values = _db.GetEntityFieldValues("product", row.Id);
+            RenderDynamicInputs("product", spProductDynamicFields, _productDynamicInputs, values);
         }
 
         private void NewCustomerForm()
@@ -659,6 +687,7 @@ namespace StockInvoiceApp
             txtCustEmail.Text = string.Empty;
             txtCustAddress.Text = string.Empty;
             chkCustActive.IsChecked = true;
+            RenderDynamicInputs("customer", spCustomerDynamicFields, _customerDynamicInputs, new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
         }
 
         private void NewCustomer_Click(object sender, RoutedEventArgs e)
@@ -682,7 +711,9 @@ namespace StockInvoiceApp
                     IsActive = chkCustActive.IsChecked == true
                 };
 
-                _db.SaveCustomer(customer);
+                var savedId = _db.SaveCustomer(customer);
+                _db.SaveEntityFieldValues("customer", savedId, CollectDynamicValues(_customerDynamicInputs));
+
                 ReloadLookups();
                 ReloadMasterData();
                 RefreshDashboard();
@@ -737,6 +768,8 @@ namespace StockInvoiceApp
             txtCustEmail.Text = row.Email;
             txtCustAddress.Text = row.Address;
             chkCustActive.IsChecked = row.IsActive;
+            var values = _db.GetEntityFieldValues("customer", row.Id);
+            RenderDynamicInputs("customer", spCustomerDynamicFields, _customerDynamicInputs, values);
         }
 
         private void AdjustStock_Click(object sender, RoutedEventArgs e)
@@ -773,6 +806,323 @@ namespace StockInvoiceApp
             catch (Exception ex)
             {
                 MessageBox.Show($"Adjust stock failed: {ex.Message}");
+            }
+        }
+
+        private void ReloadAllDynamicInputPanels()
+        {
+            RenderDynamicInputs("product", spProductDynamicFields, _productDynamicInputs, _editingProductId > 0
+                ? _db.GetEntityFieldValues("product", _editingProductId)
+                : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
+
+            RenderDynamicInputs("customer", spCustomerDynamicFields, _customerDynamicInputs, _editingCustomerId > 0
+                ? _db.GetEntityFieldValues("customer", _editingCustomerId)
+                : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
+
+            RenderDynamicInputs("invoice", spInvoiceDynamicFields, _invoiceDynamicInputs, _editingInvoiceId > 0
+                ? _db.GetEntityFieldValues("invoice", _editingInvoiceId)
+                : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
+        }
+
+        private void RenderDynamicInputs(string entityType, Panel container, Dictionary<string, FrameworkElement> collector, IReadOnlyDictionary<string, string> values)
+        {
+            collector.Clear();
+            container.Children.Clear();
+
+            var fields = _db.GetDynamicFieldDefinitions(entityType).Where(x => x.IsVisible).OrderBy(x => x.SortOrder).ThenBy(x => x.Id).ToList();
+            if (fields.Count == 0)
+            {
+                container.Children.Add(new TextBlock
+                {
+                    Text = "No dynamic fields configured.",
+                    Opacity = 0.7,
+                    Margin = new Thickness(0, 2, 0, 2)
+                });
+                return;
+            }
+
+            foreach (var field in fields)
+            {
+                var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 2, 0, 2) };
+                var label = new TextBlock
+                {
+                    Text = field.IsRequired ? $"{field.Label} *" : field.Label,
+                    Width = 180,
+                    VerticalAlignment = System.Windows.VerticalAlignment.Center
+                };
+                row.Children.Add(label);
+
+                var existing = values.TryGetValue(field.FieldKey, out var raw) ? raw : string.Empty;
+                FrameworkElement input;
+                switch (field.DataType)
+                {
+                    case "boolean":
+                        var chk = new CheckBox { IsChecked = string.Equals(existing, "true", StringComparison.OrdinalIgnoreCase) || existing == "1" };
+                        input = chk;
+                        break;
+                    case "date":
+                        var dp = new DatePicker { Width = 180 };
+                        if (DateTime.TryParse(existing, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt))
+                        {
+                            dp.SelectedDate = dt;
+                        }
+                        input = dp;
+                        break;
+                    default:
+                        input = new TextBox { Width = 260, Text = existing };
+                        break;
+                }
+
+                collector[field.FieldKey] = input;
+                row.Children.Add(input);
+                container.Children.Add(row);
+            }
+        }
+
+        private static Dictionary<string, string> CollectDynamicValues(Dictionary<string, FrameworkElement> inputs)
+        {
+            var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (key, element) in inputs)
+            {
+                switch (element)
+                {
+                    case TextBox textBox:
+                        result[key] = textBox.Text?.Trim() ?? string.Empty;
+                        break;
+                    case CheckBox checkBox:
+                        result[key] = checkBox.IsChecked == true ? "true" : "false";
+                        break;
+                    case DatePicker datePicker:
+                        result[key] = datePicker.SelectedDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty;
+                        break;
+                    default:
+                        result[key] = string.Empty;
+                        break;
+                }
+            }
+
+            return result;
+        }
+
+        private void CbDynamicEntity_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ReloadDynamicFields();
+        }
+
+        private void ReloadDynamicFields_Click(object sender, RoutedEventArgs e)
+        {
+            ReloadDynamicFields();
+        }
+
+        private void ReloadDynamicFields()
+        {
+            if (cbDynamicEntity.SelectedItem is not string entity)
+            {
+                return;
+            }
+
+            dgDynamicFields.ItemsSource = _db.GetDynamicFieldDefinitions(entity);
+            NewDynamicFieldForm();
+        }
+
+        private void NewDynamicField_Click(object sender, RoutedEventArgs e)
+        {
+            NewDynamicFieldForm();
+        }
+
+        private void NewDynamicFieldForm()
+        {
+            _editingDynamicFieldId = 0;
+            txtDynKey.Text = string.Empty;
+            txtDynLabel.Text = string.Empty;
+            cbDynDataType.SelectedItem = "text";
+            chkDynRequired.IsChecked = false;
+            chkDynVisible.IsChecked = true;
+            chkDynPdf.IsChecked = false;
+            txtDynSort.Text = "0";
+        }
+
+        private void SaveDynamicField_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (cbDynamicEntity.SelectedItem is not string entity)
+                {
+                    MessageBox.Show("Please select entity type.");
+                    return;
+                }
+
+                if (!int.TryParse(txtDynSort.Text, out var sortOrder))
+                {
+                    MessageBox.Show("Sort must be integer.");
+                    return;
+                }
+
+                var field = new DynamicFieldDefinition
+                {
+                    Id = _editingDynamicFieldId,
+                    EntityType = entity,
+                    FieldKey = txtDynKey.Text.Trim(),
+                    Label = txtDynLabel.Text.Trim(),
+                    DataType = cbDynDataType.SelectedItem?.ToString() ?? "text",
+                    IsRequired = chkDynRequired.IsChecked == true,
+                    IsVisible = chkDynVisible.IsChecked == true,
+                    ShowInPdf = chkDynPdf.IsChecked == true,
+                    SortOrder = sortOrder
+                };
+
+                _db.SaveDynamicFieldDefinition(field);
+                ReloadDynamicFields();
+                ReloadAllDynamicInputPanels();
+                MessageBox.Show("Dynamic field saved.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Save dynamic field failed: {ex.Message}");
+            }
+        }
+
+        private void DeleteDynamicField_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (dgDynamicFields.SelectedItem is not DynamicFieldDefinition row)
+                {
+                    MessageBox.Show("Please select field to delete.");
+                    return;
+                }
+
+                if (MessageBox.Show($"Delete dynamic field {row.FieldKey}?", "Confirm", MessageBoxButton.YesNo) != MessageBoxResult.Yes)
+                {
+                    return;
+                }
+
+                _db.DeleteDynamicFieldDefinition(row.Id);
+                ReloadDynamicFields();
+                ReloadAllDynamicInputPanels();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Delete dynamic field failed: {ex.Message}");
+            }
+        }
+
+        private void DgDynamicFields_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (dgDynamicFields.SelectedItem is not DynamicFieldDefinition row)
+            {
+                return;
+            }
+
+            _editingDynamicFieldId = row.Id;
+            txtDynKey.Text = row.FieldKey;
+            txtDynLabel.Text = row.Label;
+            cbDynDataType.SelectedItem = row.DataType;
+            chkDynRequired.IsChecked = row.IsRequired;
+            chkDynVisible.IsChecked = row.IsVisible;
+            chkDynPdf.IsChecked = row.ShowInPdf;
+            txtDynSort.Text = row.SortOrder.ToString(CultureInfo.InvariantCulture);
+        }
+
+        private void ExportBackup_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var dialog = new SaveFileDialog
+                {
+                    Filter = "JSON files (*.json)|*.json",
+                    FileName = $"backup-{DateTime.Now:yyyyMMdd-HHmmss}.json"
+                };
+
+                if (dialog.ShowDialog() != true)
+                {
+                    return;
+                }
+
+                _db.ExportBackup(dialog.FileName);
+                MessageBox.Show("Backup exported.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Export backup failed: {ex.Message}");
+            }
+        }
+
+        private void ImportBackup_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var dialog = new OpenFileDialog
+                {
+                    Filter = "JSON files (*.json)|*.json",
+                    CheckFileExists = true,
+                    Multiselect = false
+                };
+
+                if (dialog.ShowDialog() != true)
+                {
+                    return;
+                }
+
+                if (MessageBox.Show("Import backup will replace current data. Continue?", "Confirm", MessageBoxButton.YesNo) != MessageBoxResult.Yes)
+                {
+                    return;
+                }
+
+                _db.ImportBackup(dialog.FileName);
+                ReloadLookups();
+                ReloadMasterData();
+                ReloadInvoices();
+                ReloadDynamicFields();
+                ReloadAllDynamicInputPanels();
+                RefreshDashboard();
+                ResetInvoiceForm();
+                NewProductForm();
+                NewCustomerForm();
+                MessageBox.Show("Backup imported.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Import backup failed: {ex.Message}");
+            }
+        }
+
+        private void HardReset_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var backupDialog = new SaveFileDialog
+                {
+                    Filter = "JSON files (*.json)|*.json",
+                    FileName = $"pre-reset-backup-{DateTime.Now:yyyyMMdd-HHmmss}.json"
+                };
+
+                if (backupDialog.ShowDialog() != true)
+                {
+                    return;
+                }
+
+                _db.ExportBackup(backupDialog.FileName);
+
+                if (MessageBox.Show("Hard reset will delete all business data after backup. Continue?", "Confirm Hard Reset", MessageBoxButton.YesNo) != MessageBoxResult.Yes)
+                {
+                    return;
+                }
+
+                _db.HardResetBusinessData();
+                ReloadLookups();
+                ReloadMasterData();
+                ReloadInvoices();
+                ReloadAllDynamicInputPanels();
+                RefreshDashboard();
+                ResetInvoiceForm();
+                NewProductForm();
+                NewCustomerForm();
+                MessageBox.Show("Hard reset completed.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Hard reset failed: {ex.Message}");
             }
         }
     }
