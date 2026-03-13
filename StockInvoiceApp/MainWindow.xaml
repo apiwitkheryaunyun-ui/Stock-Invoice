@@ -14,7 +14,6 @@
 
         <DockPanel Grid.Row="0" Margin="0,0,0,8">
             <TextBlock Text="Stock &amp; Invoice Starter" FontSize="22" FontWeight="SemiBold" />
-            <TextBlock x:Name="txtMode" DockPanel.Dock="Right" VerticalAlignment="Center" FontWeight="Bold" />
         </DockPanel>
 
         <TabControl Grid.Row="1">
@@ -35,7 +34,7 @@
                             <TextBlock Text="To" VerticalAlignment="Center" Margin="0,0,6,0" />
                             <DatePicker x:Name="dpDashTo" Width="130" Margin="0,0,8,0" />
                             <TextBlock Text="Low Stock &lt;" VerticalAlignment="Center" Margin="0,0,6,0" />
-                            <TextBox x:Name="txtLowStockThreshold" Width="60" Text="10" Margin="0,0,8,0" />
+                            <TextBox x:Name="txtLowStockThreshold" Width="60" Text="10" Margin="0,0,8,0" ToolTip="จำนวนสินค้าคงเหลือต่ำสุดที่ต้องการแจ้งเตือน / Low stock threshold" />
                             <Button Content="Apply Filter" Width="110" Margin="0,0,8,0" Click="RefreshDashboard_Click" />
                             <Button Content="Export PDF" Width="100" Margin="0,0,8,0" Click="ExportDashboardPdf_Click" />
                             <Button Content="Clear Filter" Width="100" Click="ClearDashboardFilter_Click" />
@@ -163,7 +162,7 @@
                             <TextBlock x:Name="txtInvoiceLockStatus" Grid.Row="0" Grid.ColumnSpan="4" Foreground="#B91C1C" FontWeight="Bold" Margin="0,0,0,6" />
 
                             <TextBlock Text="Invoice No" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" />
-                            <TextBox x:Name="txtInvoiceNo" Grid.Row="1" Grid.Column="1" Margin="0,0,8,6" />
+                            <TextBox x:Name="txtInvoiceNo" Grid.Row="1" Grid.Column="1" Margin="0,0,8,6" ToolTip="เลขที่ใบกำกับ / Invoice No" />
                             <TextBlock Text="Status" Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" />
                             <ComboBox x:Name="cbStatus" Grid.Row="1" Grid.Column="3" Margin="0,0,0,6" />
 
@@ -175,7 +174,7 @@
                             <TextBlock Text="Due Date" Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" />
                             <DatePicker x:Name="dpDueDate" Grid.Row="3" Grid.Column="1" Margin="0,0,8,6" />
                             <TextBlock Text="Notes" Grid.Row="3" Grid.Column="2" VerticalAlignment="Center" />
-                            <TextBox x:Name="txtNotes" Grid.Row="3" Grid.Column="3" Margin="0,0,0,6" />
+                            <TextBox x:Name="txtNotes" Grid.Row="3" Grid.Column="3" Margin="0,0,0,6" ToolTip="หมายเหตุ / Notes" />
 
                             <GroupBox Grid.Row="4" Grid.ColumnSpan="4" Header="Invoice Dynamic Fields" Margin="0,0,0,8">
                                 <ScrollViewer Height="120" VerticalScrollBarVisibility="Auto">
@@ -199,9 +198,9 @@
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <ComboBox x:Name="cbItemProduct" Grid.Column="0" Margin="0,0,8,0" DisplayMemberPath="Name" SelectedValuePath="Id" SelectionChanged="CbItemProduct_SelectionChanged" />
-                                        <TextBox x:Name="txtItemQty" Grid.Column="1" Margin="0,0,8,0" Text="1" />
-                                        <TextBox x:Name="txtItemUnitPrice" Grid.Column="2" Margin="0,0,8,0" Text="0" />
-                                        <TextBox x:Name="txtItemDiscount" Grid.Column="3" Margin="0,0,8,0" Text="0" />
+                                        <TextBox x:Name="txtItemQty" Grid.Column="1" Margin="0,0,8,0" Text="1" ToolTip="จำนวน / Quantity" />
+                                        <TextBox x:Name="txtItemUnitPrice" Grid.Column="2" Margin="0,0,8,0" Text="0" ToolTip="ราคาต่อหน่วย / Unit Price" />
+                                        <TextBox x:Name="txtItemDiscount" Grid.Column="3" Margin="0,0,8,0" Text="0" ToolTip="ส่วนลด / Discount" />
                                         <Button x:Name="btnAddLine" Content="Add Line" Grid.Column="4" Width="100" Click="AddLine_Click" />
                                     </Grid>
 
@@ -274,12 +273,12 @@
                             </DataGrid>
                             <StackPanel Grid.Row="1" Margin="0,8,0,0">
                                 <WrapPanel Margin="0,0,0,6">
-                                    <TextBox x:Name="txtProdSku" Width="110" Margin="0,0,6,0" />
-                                    <TextBox x:Name="txtProdName" Width="220" Margin="0,0,6,0" />
-                                    <TextBox x:Name="txtProdUnit" Width="70" Margin="0,0,6,0" Text="pcs" />
-                                    <TextBox x:Name="txtProdSellPrice" Width="90" Margin="0,0,6,0" Text="0" />
-                                    <TextBox x:Name="txtProdCostPrice" Width="90" Margin="0,0,6,0" Text="0" />
-                                    <TextBox x:Name="txtProdTaxRate" Width="70" Margin="0,0,6,0" Text="7" />
+                                    <TextBox x:Name="txtProdSku" Width="110" Margin="0,0,6,0" ToolTip="รหัสสินค้า / SKU" />
+                                    <TextBox x:Name="txtProdName" Width="220" Margin="0,0,6,0" ToolTip="ชื่อสินค้า / Product Name" />
+                                    <TextBox x:Name="txtProdUnit" Width="70" Margin="0,0,6,0" Text="pcs" ToolTip="หน่วยนับ / Unit" />
+                                    <TextBox x:Name="txtProdSellPrice" Width="90" Margin="0,0,6,0" Text="0" ToolTip="ราคาขาย / Sell Price" />
+                                    <TextBox x:Name="txtProdCostPrice" Width="90" Margin="0,0,6,0" Text="0" ToolTip="ราคาทุน / Cost Price" />
+                                    <TextBox x:Name="txtProdTaxRate" Width="70" Margin="0,0,6,0" Text="7" ToolTip="ภาษี (%) / Tax Rate" />
                                     <CheckBox x:Name="chkProdActive" Content="Active" IsChecked="True" VerticalAlignment="Center" />
                                 </WrapPanel>
                                 <GroupBox Header="Product Dynamic Fields" Margin="0,0,0,6">
@@ -313,14 +312,14 @@
                             </DataGrid>
                             <StackPanel Grid.Row="1" Margin="0,8,0,0">
                                 <WrapPanel Margin="0,0,0,6">
-                                    <TextBox x:Name="txtCustCode" Width="110" Margin="0,0,6,0" />
-                                    <TextBox x:Name="txtCustName" Width="180" Margin="0,0,6,0" />
-                                    <TextBox x:Name="txtCustTaxId" Width="120" Margin="0,0,6,0" />
-                                    <TextBox x:Name="txtCustPhone" Width="110" Margin="0,0,6,0" />
-                                    <TextBox x:Name="txtCustEmail" Width="150" Margin="0,0,6,0" />
+                                    <TextBox x:Name="txtCustCode" Width="110" Margin="0,0,6,0" ToolTip="รหัสลูกค้า / Customer Code" />
+                                    <TextBox x:Name="txtCustName" Width="180" Margin="0,0,6,0" ToolTip="ชื่อลูกค้า / Customer Name" />
+                                    <TextBox x:Name="txtCustTaxId" Width="120" Margin="0,0,6,0" ToolTip="เลขประจำตัวผู้เสียภาษี / Tax ID" />
+                                    <TextBox x:Name="txtCustPhone" Width="110" Margin="0,0,6,0" ToolTip="เบอร์โทร / Phone" />
+                                    <TextBox x:Name="txtCustEmail" Width="150" Margin="0,0,6,0" ToolTip="อีเมล / Email" />
                                 </WrapPanel>
                                 <WrapPanel Margin="0,0,0,6">
-                                    <TextBox x:Name="txtCustAddress" Width="430" Margin="0,0,6,0" />
+                                    <TextBox x:Name="txtCustAddress" Width="430" Margin="0,0,6,0" ToolTip="ที่อยู่ / Address" />
                                     <CheckBox x:Name="chkCustActive" Content="Active" IsChecked="True" VerticalAlignment="Center" />
                                 </WrapPanel>
                                 <GroupBox Header="Customer Dynamic Fields" Margin="0,0,0,6">
@@ -349,9 +348,9 @@
                             </Grid.ColumnDefinitions>
                             <ComboBox x:Name="cbAdjustProduct" Grid.Column="0" DisplayMemberPath="Name" SelectedValuePath="Id" Margin="0,0,8,0" />
                             <TextBlock Grid.Column="1" Text="Qty +/-" VerticalAlignment="Center" Margin="0,0,6,0" />
-                            <TextBox x:Name="txtAdjustQty" Grid.Column="2" Width="90" Margin="0,0,8,0" Text="0" />
-                            <TextBox x:Name="txtAdjustUnitCost" Grid.Column="3" Width="100" Margin="0,0,8,0" Text="0" />
-                            <TextBox x:Name="txtAdjustNote" Grid.Column="4" Margin="0,0,8,0" />
+                            <TextBox x:Name="txtAdjustQty" Grid.Column="2" Width="90" Margin="0,0,8,0" Text="0" ToolTip="จำนวนที่ปรับ / Adjust Qty" />
+                            <TextBox x:Name="txtAdjustUnitCost" Grid.Column="3" Width="100" Margin="0,0,8,0" Text="0" ToolTip="ต้นทุนต่อหน่วย / Unit Cost" />
+                            <TextBox x:Name="txtAdjustNote" Grid.Column="4" Margin="0,0,8,0" ToolTip="หมายเหตุ / Note" />
                             <Button Grid.Column="5" Width="120" Content="Adjust Stock" Click="AdjustStock_Click" />
                         </Grid>
                     </GroupBox>
@@ -425,8 +424,8 @@
                             </DataGrid>
 
                             <WrapPanel Grid.Row="2" Margin="0,8,0,0">
-                                <TextBox x:Name="txtDynKey" Width="150" Margin="0,0,6,0" />
-                                <TextBox x:Name="txtDynLabel" Width="220" Margin="0,0,6,0" />
+                                <TextBox x:Name="txtDynKey" Width="150" Margin="0,0,6,0" ToolTip="ชื่อคีย์ (อังกฤษ) / Field Key (EN)" />
+                                <TextBox x:Name="txtDynLabel" Width="220" Margin="0,0,6,0" ToolTip="ชื่อฟิลด์ที่แสดง / Field Label" />
                                 <ComboBox x:Name="cbDynDataType" Width="110" Margin="0,0,6,0" />
                                 <TextBox x:Name="txtDynSort" Width="70" Margin="0,0,6,0" Text="0" />
                                 <CheckBox x:Name="chkDynRequired" Content="Required" Margin="0,0,8,0" VerticalAlignment="Center" />

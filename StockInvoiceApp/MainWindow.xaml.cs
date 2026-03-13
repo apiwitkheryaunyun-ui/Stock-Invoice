@@ -50,7 +50,7 @@ namespace StockInvoiceApp
 
         private void SetupView()
         {
-            txtMode.Text = $"Mode: {_db.AppMode.ToUpperInvariant()}";
+            // txtMode ถูกลบออกจาก XAML แล้ว ไม่ต้องเซ็ตค่า
             cbStatus.ItemsSource = new[] { "draft", "issued", "paid", "cancelled" };
             cbStatus.SelectedItem = "issued";
             cbDynDataType.ItemsSource = new[] { "text", "number", "date", "boolean", "image" };
