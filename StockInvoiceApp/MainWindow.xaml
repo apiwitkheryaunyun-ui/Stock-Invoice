@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:oxy="http://oxyplot.org/wpf"
         mc:Ignorable="d"
-        Title="Stock &amp; Invoice Starter" Height="900" Width="1400" MinHeight="780" MinWidth="1220">
+        Title="{DynamicResource AppTitle}" Height="900" Width="1400" MinHeight="780" MinWidth="1220">
     <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -13,11 +13,15 @@
         </Grid.RowDefinitions>
 
         <DockPanel Grid.Row="0" Margin="0,0,0,8">
-            <TextBlock Text="Stock &amp; Invoice Starter" FontSize="22" FontWeight="SemiBold" />
+            <TextBlock Text="{DynamicResource AppTitle}" FontSize="22" FontWeight="SemiBold" />
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button x:Name="btnLangTh" Content="ไทย" Width="60" Margin="0,0,4,0" Click="BtnLangTh_Click" />
+                <Button x:Name="btnLangEn" Content="EN" Width="60" Click="BtnLangEn_Click" />
+            </StackPanel>
         </DockPanel>
 
         <TabControl Grid.Row="1">
-            <TabItem Header="Dashboard">
+            <TabItem Header="{DynamicResource Dashboard}">
                 <Grid Margin="12">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -27,50 +31,50 @@
                     </Grid.RowDefinitions>
 
                     <DockPanel Grid.Row="0" Margin="0,0,0,10">
-                        <TextBlock Text="Business Snapshot" FontSize="18" FontWeight="SemiBold" />
+                        <TextBlock Text="{DynamicResource BusinessSnapshot}" FontSize="18" FontWeight="SemiBold" />
                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                            <TextBlock Text="From" VerticalAlignment="Center" Margin="0,0,6,0" />
+                            <TextBlock Text="{DynamicResource From}" VerticalAlignment="Center" Margin="0,0,6,0" />
                             <DatePicker x:Name="dpDashFrom" Width="130" Margin="0,0,8,0" />
-                            <TextBlock Text="To" VerticalAlignment="Center" Margin="0,0,6,0" />
+                            <TextBlock Text="{DynamicResource To}" VerticalAlignment="Center" Margin="0,0,6,0" />
                             <DatePicker x:Name="dpDashTo" Width="130" Margin="0,0,8,0" />
-                            <TextBlock Text="Low Stock &lt;" VerticalAlignment="Center" Margin="0,0,6,0" />
+                            <TextBlock Text="{DynamicResource LowStock}" VerticalAlignment="Center" Margin="0,0,6,0" />
                             <TextBox x:Name="txtLowStockThreshold" Width="60" Text="10" Margin="0,0,8,0" ToolTip="จำนวนสินค้าคงเหลือต่ำสุดที่ต้องการแจ้งเตือน / Low stock threshold" />
-                            <Button Content="Apply Filter" Width="110" Margin="0,0,8,0" Click="RefreshDashboard_Click" />
-                            <Button Content="Export PDF" Width="100" Margin="0,0,8,0" Click="ExportDashboardPdf_Click" />
-                            <Button Content="Clear Filter" Width="100" Click="ClearDashboardFilter_Click" />
+                            <Button Content="{DynamicResource Apply}" Width="110" Margin="0,0,8,0" Click="RefreshDashboard_Click" />
+                            <Button Content="{DynamicResource ExportPDF}" Width="100" Margin="0,0,8,0" Click="ExportDashboardPdf_Click" />
+                            <Button Content="{DynamicResource Clear}" Width="100" Click="ClearDashboardFilter_Click" />
                         </StackPanel>
                     </DockPanel>
 
                     <UniformGrid Grid.Row="1" Columns="4" Margin="0,0,0,10">
                         <Border BorderBrush="#DADADA" BorderThickness="1" Margin="0,0,8,0" Padding="10">
                             <StackPanel>
-                                <TextBlock Text="Products" FontWeight="SemiBold" />
+                                <TextBlock Text="{DynamicResource Products}" FontWeight="SemiBold" />
                                 <TextBlock x:Name="txtTotalProducts" FontSize="24" FontWeight="Bold" />
-                                <TextBlock Text="Total stock qty" />
+                                <TextBlock Text="{DynamicResource TotalStockQty}" />
                                 <TextBlock x:Name="txtTotalStockQty" FontWeight="SemiBold" />
                             </StackPanel>
                         </Border>
                         <Border BorderBrush="#DADADA" BorderThickness="1" Margin="0,0,8,0" Padding="10">
                             <StackPanel>
-                                <TextBlock Text="Customers" FontWeight="SemiBold" />
+                                <TextBlock Text="{DynamicResource Customers}" FontWeight="SemiBold" />
                                 <TextBlock x:Name="txtTotalCustomers" FontSize="24" FontWeight="Bold" />
-                                <TextBlock Text="Invoices" />
+                                <TextBlock Text="{DynamicResource Invoices}" />
                                 <TextBlock x:Name="txtTotalInvoices" FontWeight="SemiBold" />
                             </StackPanel>
                         </Border>
                         <Border BorderBrush="#DADADA" BorderThickness="1" Margin="0,0,8,0" Padding="10">
                             <StackPanel>
-                                <TextBlock Text="Sales Today" FontWeight="SemiBold" />
+                                <TextBlock Text="{DynamicResource SalesToday}" FontWeight="SemiBold" />
                                 <TextBlock x:Name="txtSalesDaily" FontSize="24" FontWeight="Bold" />
-                                <TextBlock Text="Sales This Month" />
+                                <TextBlock Text="{DynamicResource SalesThisMonth}" />
                                 <TextBlock x:Name="txtSalesMonthly" FontWeight="SemiBold" />
                             </StackPanel>
                         </Border>
                         <Border BorderBrush="#DADADA" BorderThickness="1" Padding="10">
                             <StackPanel>
-                                <TextBlock Text="Sales This Year" FontWeight="SemiBold" />
+                                <TextBlock Text="{DynamicResource SalesThisYear}" FontWeight="SemiBold" />
                                 <TextBlock x:Name="txtSalesYearly" FontSize="24" FontWeight="Bold" />
-                                <TextBlock Text="Tax Rate / Low Stock" />
+                                <TextBlock Text="{DynamicResource TaxRateLowStock}" />
                                 <TextBlock x:Name="txtTaxRateHint" FontWeight="SemiBold" />
                             </StackPanel>
                         </Border>
@@ -81,15 +85,15 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <GroupBox Header="Sales: Last 7 Days">
+                        <GroupBox Header="{DynamicResource SalesLast7Days}">
                             <oxy:PlotView x:Name="plotDailySales" />
                         </GroupBox>
-                        <GroupBox Grid.Column="1" Header="Sales: Last 12 Months" Margin="8,0,0,0">
+                        <GroupBox Grid.Column="1" Header="{DynamicResource SalesLast12Months}" Margin="8,0,0,0">
                             <oxy:PlotView x:Name="plotMonthlySales" />
                         </GroupBox>
                     </Grid>
 
-                    <GroupBox Grid.Row="3" Header="Stock Levels (low to high)">
+                    <GroupBox Grid.Row="3" Header="{DynamicResource StockLevelsLowToHigh}">
                         <DataGrid x:Name="dgStockLevels" AutoGenerateColumns="False" IsReadOnly="True">
                             <DataGrid.RowStyle>
                                 <Style TargetType="DataGridRow">
@@ -101,47 +105,47 @@
                                 </Style>
                             </DataGrid.RowStyle>
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Product ID" Binding="{Binding ProductId}" Width="90" />
-                                <DataGridTextColumn Header="SKU" Binding="{Binding Sku}" Width="130" />
-                                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" />
-                                <DataGridTextColumn Header="Stock Qty" Binding="{Binding StockQty, StringFormat=N2}" Width="120" />
-                                <DataGridTextColumn Header="Sell Price" Binding="{Binding SellPrice, StringFormat=N2}" Width="120" />
-                                <DataGridCheckBoxColumn Header="Low" Binding="{Binding IsLowStock}" Width="70" />
+                                <DataGridTextColumn Header="{DynamicResource ProductID}" Binding="{Binding ProductId}" Width="90" />
+                                <DataGridTextColumn Header="{DynamicResource SKU}" Binding="{Binding Sku}" Width="130" />
+                                <DataGridTextColumn Header="{DynamicResource Name}" Binding="{Binding Name}" Width="*" />
+                                <DataGridTextColumn Header="{DynamicResource StockQty}" Binding="{Binding StockQty, StringFormat=N2}" Width="120" />
+                                <DataGridTextColumn Header="{DynamicResource SellPrice}" Binding="{Binding SellPrice, StringFormat=N2}" Width="120" />
+                                <DataGridCheckBoxColumn Header="{DynamicResource Low}" Binding="{Binding IsLowStock}" Width="70" />
                             </DataGrid.Columns>
                         </DataGrid>
                     </GroupBox>
                 </Grid>
             </TabItem>
 
-            <TabItem Header="Invoice CRUD">
+            <TabItem Header="{DynamicResource InvoiceCRUD}">
                 <Grid Margin="8">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="1.2*" />
                         <ColumnDefinition Width="2*" />
                     </Grid.ColumnDefinitions>
 
-                    <GroupBox Header="Invoices" Grid.Column="0" Margin="0,0,8,0">
+                    <GroupBox Header="{DynamicResource Invoices}" Grid.Column="0" Margin="0,0,8,0">
                         <DockPanel Margin="8">
                             <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="0,0,0,8">
-                                <Button Content="Reload" Width="90" Margin="0,0,8,0" Click="ReloadInvoices_Click" />
-                                <Button Content="New" Width="90" Margin="0,0,8,0" Click="NewInvoice_Click" />
-                                <Button x:Name="btnDeleteInvoice" Content="Delete" Width="90" Margin="0,0,8,0" Click="DeleteInvoice_Click" />
-                                <Button Content="Export Invoice PDF" Width="140" Click="ExportInvoicePdf_Click" />
+                                <Button Content="{DynamicResource Reload}" Width="90" Margin="0,0,8,0" Click="ReloadInvoices_Click" />
+                                <Button Content="{DynamicResource New}" Width="90" Margin="0,0,8,0" Click="NewInvoice_Click" />
+                                <Button x:Name="btnDeleteInvoice" Content="{DynamicResource Delete}" Width="90" Margin="0,0,8,0" Click="DeleteInvoice_Click" />
+                                <Button Content="{DynamicResource ExportInvoicePDF}" Width="140" Click="ExportInvoicePdf_Click" />
                             </StackPanel>
                             <DataGrid x:Name="dgInvoices" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionChanged="DgInvoices_SelectionChanged">
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60" />
-                                    <DataGridTextColumn Header="Invoice No" Binding="{Binding InvoiceNo}" Width="140" />
-                                    <DataGridTextColumn Header="Customer" Binding="{Binding CustomerName}" Width="*" />
-                                    <DataGridTextColumn Header="Date" Binding="{Binding InvoiceDate, StringFormat=yyyy-MM-dd}" Width="110" />
-                                    <DataGridTextColumn Header="Total" Binding="{Binding GrandTotal, StringFormat=N2}" Width="100" />
-                                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100" />
+                                    <DataGridTextColumn Header="{DynamicResource ID}" Binding="{Binding Id}" Width="60" />
+                                    <DataGridTextColumn Header="{DynamicResource InvoiceNo}" Binding="{Binding InvoiceNo}" Width="140" />
+                                    <DataGridTextColumn Header="{DynamicResource Customer}" Binding="{Binding CustomerName}" Width="*" />
+                                    <DataGridTextColumn Header="{DynamicResource Date}" Binding="{Binding InvoiceDate, StringFormat=yyyy-MM-dd}" Width="110" />
+                                    <DataGridTextColumn Header="{DynamicResource Total}" Binding="{Binding GrandTotal, StringFormat=N2}" Width="100" />
+                                    <DataGridTextColumn Header="{DynamicResource Status}" Binding="{Binding Status}" Width="100" />
                                 </DataGrid.Columns>
                             </DataGrid>
                         </DockPanel>
                     </GroupBox>
 
-                    <GroupBox Header="Invoice Editor" Grid.Column="1">
+                    <GroupBox Header="{DynamicResource InvoiceEditor}" Grid.Column="1">
                         <Grid Margin="8">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -161,22 +165,22 @@
 
                             <TextBlock x:Name="txtInvoiceLockStatus" Grid.Row="0" Grid.ColumnSpan="4" Foreground="#B91C1C" FontWeight="Bold" Margin="0,0,0,6" />
 
-                            <TextBlock Text="Invoice No" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" />
+                            <TextBlock Text="{DynamicResource InvoiceNo}" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" />
                             <TextBox x:Name="txtInvoiceNo" Grid.Row="1" Grid.Column="1" Margin="0,0,8,6" ToolTip="เลขที่ใบกำกับ / Invoice No" />
-                            <TextBlock Text="Status" Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" />
+                            <TextBlock Text="{DynamicResource Status}" Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" />
                             <ComboBox x:Name="cbStatus" Grid.Row="1" Grid.Column="3" Margin="0,0,0,6" />
 
-                            <TextBlock Text="Customer" Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" />
+                            <TextBlock Text="{DynamicResource Customer}" Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" />
                             <ComboBox x:Name="cbCustomer" Grid.Row="2" Grid.Column="1" Margin="0,0,8,6" DisplayMemberPath="Name" SelectedValuePath="Id" />
-                            <TextBlock Text="Invoice Date" Grid.Row="2" Grid.Column="2" VerticalAlignment="Center" />
+                            <TextBlock Text="{DynamicResource InvoiceDate}" Grid.Row="2" Grid.Column="2" VerticalAlignment="Center" />
                             <DatePicker x:Name="dpInvoiceDate" Grid.Row="2" Grid.Column="3" Margin="0,0,0,6" />
 
-                            <TextBlock Text="Due Date" Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" />
+                            <TextBlock Text="{DynamicResource DueDate}" Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" />
                             <DatePicker x:Name="dpDueDate" Grid.Row="3" Grid.Column="1" Margin="0,0,8,6" />
-                            <TextBlock Text="Notes" Grid.Row="3" Grid.Column="2" VerticalAlignment="Center" />
+                            <TextBlock Text="{DynamicResource Notes}" Grid.Row="3" Grid.Column="2" VerticalAlignment="Center" />
                             <TextBox x:Name="txtNotes" Grid.Row="3" Grid.Column="3" Margin="0,0,0,6" ToolTip="หมายเหตุ / Notes" />
 
-                            <GroupBox Grid.Row="4" Grid.ColumnSpan="4" Header="Invoice Dynamic Fields" Margin="0,0,0,8">
+                            <GroupBox Grid.Row="4" Grid.ColumnSpan="4" Header="{DynamicResource InvoiceDynamicFields}" Margin="0,0,0,8">
                                 <ScrollViewer Height="120" VerticalScrollBarVisibility="Auto">
                                     <StackPanel x:Name="spInvoiceDynamicFields" Margin="8,4,8,8" />
                                 </ScrollViewer>
@@ -201,16 +205,16 @@
                                         <TextBox x:Name="txtItemQty" Grid.Column="1" Margin="0,0,8,0" Text="1" ToolTip="จำนวน / Quantity" />
                                         <TextBox x:Name="txtItemUnitPrice" Grid.Column="2" Margin="0,0,8,0" Text="0" ToolTip="ราคาต่อหน่วย / Unit Price" />
                                         <TextBox x:Name="txtItemDiscount" Grid.Column="3" Margin="0,0,8,0" Text="0" ToolTip="ส่วนลด / Discount" />
-                                        <Button x:Name="btnAddLine" Content="Add Line" Grid.Column="4" Width="100" Click="AddLine_Click" />
+                                        <Button x:Name="btnAddLine" Content="{DynamicResource AddLine}" Grid.Column="4" Width="100" Click="AddLine_Click" />
                                     </Grid>
 
                                     <DataGrid x:Name="dgItems" Grid.Row="1" AutoGenerateColumns="False" SelectionMode="Single">
                                         <DataGrid.Columns>
-                                            <DataGridTextColumn Header="Product" Binding="{Binding ProductDisplay}" Width="*" />
-                                            <DataGridTextColumn Header="Qty" Binding="{Binding Qty, StringFormat=N2}" Width="100" />
-                                            <DataGridTextColumn Header="Unit Price" Binding="{Binding UnitPrice, StringFormat=N2}" Width="110" />
-                                            <DataGridTextColumn Header="Discount" Binding="{Binding Discount, StringFormat=N2}" Width="100" />
-                                            <DataGridTextColumn Header="Line Total" Binding="{Binding LineTotal, StringFormat=N2}" Width="120" />
+                                            <DataGridTextColumn Header="{DynamicResource Product}" Binding="{Binding ProductDisplay}" Width="*" />
+                                            <DataGridTextColumn Header="{DynamicResource Qty}" Binding="{Binding Qty, StringFormat=N2}" Width="100" />
+                                            <DataGridTextColumn Header="{DynamicResource UnitPrice}" Binding="{Binding UnitPrice, StringFormat=N2}" Width="110" />
+                                            <DataGridTextColumn Header="{DynamicResource Discount}" Binding="{Binding Discount, StringFormat=N2}" Width="100" />
+                                            <DataGridTextColumn Header="{DynamicResource LineTotal}" Binding="{Binding LineTotal, StringFormat=N2}" Width="120" />
                                         </DataGrid.Columns>
                                     </DataGrid>
                                 </Grid>
@@ -229,14 +233,14 @@
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
 
-                                <Button x:Name="btnRemoveLine" Grid.Column="0" Content="Remove Selected Line" Width="160" Margin="0,0,8,0" Click="RemoveLine_Click" />
-                                <Button x:Name="btnSaveInvoice" Grid.Column="1" Content="Save Invoice" Width="110" Margin="0,0,8,0" Click="SaveInvoice_Click" />
+                                <Button x:Name="btnRemoveLine" Grid.Column="0" Content="{DynamicResource RemoveSelectedLine}" Width="160" Margin="0,0,8,0" Click="RemoveLine_Click" />
+                                <Button x:Name="btnSaveInvoice" Grid.Column="1" Content="{DynamicResource SaveInvoice}" Width="110" Margin="0,0,8,0" Click="SaveInvoice_Click" />
 
-                                <TextBlock Grid.Column="3" Text="Subtotal:" VerticalAlignment="Center" Margin="8,0,4,0" />
+                                <TextBlock Grid.Column="3" Text="{DynamicResource Subtotal}" VerticalAlignment="Center" Margin="8,0,4,0" />
                                 <TextBlock x:Name="txtSubtotal" Grid.Column="4" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,8,0" />
-                                <TextBlock Grid.Column="5" Text="Tax:" VerticalAlignment="Center" Margin="8,0,4,0" />
+                                <TextBlock Grid.Column="5" Text="{DynamicResource Tax}" VerticalAlignment="Center" Margin="8,0,4,0" />
                                 <TextBlock x:Name="txtTax" Grid.Column="6" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,8,0" />
-                                <TextBlock Grid.Column="7" Text="Grand:" VerticalAlignment="Center" Margin="8,0,4,0" />
+                                <TextBlock Grid.Column="7" Text="{DynamicResource Grand}" VerticalAlignment="Center" Margin="8,0,4,0" />
                                 <TextBlock x:Name="txtGrand" Grid.Column="8" VerticalAlignment="Center" FontWeight="Bold" FontSize="15" />
                             </Grid>
                         </Grid>
@@ -244,7 +248,7 @@
                 </Grid>
             </TabItem>
 
-            <TabItem Header="Master Data">
+            <TabItem Header="{DynamicResource MasterData}">
                 <Grid Margin="10">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="2*" />
@@ -256,7 +260,7 @@
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
 
-                    <GroupBox Header="Products" Grid.Row="0" Grid.Column="0" Margin="0,0,8,8">
+                    <GroupBox Header="{DynamicResource Products}" Grid.Row="0" Grid.Column="0" Margin="0,0,8,8">
                         <Grid Margin="8">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="*" />
@@ -264,11 +268,11 @@
                             </Grid.RowDefinitions>
                             <DataGrid x:Name="dgManageProducts" AutoGenerateColumns="False" SelectionMode="Single" SelectionChanged="DgManageProducts_SelectionChanged">
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60" />
-                                    <DataGridTextColumn Header="SKU" Binding="{Binding Sku}" Width="120" />
-                                    <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" />
-                                    <DataGridTextColumn Header="Stock" Binding="{Binding StockQty, StringFormat=N2}" Width="90" />
-                                    <DataGridCheckBoxColumn Header="Active" Binding="{Binding IsActive}" Width="70" />
+                                    <DataGridTextColumn Header="{DynamicResource ID}" Binding="{Binding Id}" Width="60" />
+                                    <DataGridTextColumn Header="{DynamicResource SKU}" Binding="{Binding Sku}" Width="120" />
+                                    <DataGridTextColumn Header="{DynamicResource Name}" Binding="{Binding Name}" Width="*" />
+                                    <DataGridTextColumn Header="{DynamicResource StockQty}" Binding="{Binding StockQty, StringFormat=N2}" Width="90" />
+                                    <DataGridCheckBoxColumn Header="{DynamicResource Active}" Binding="{Binding IsActive}" Width="70" />
                                 </DataGrid.Columns>
                             </DataGrid>
                             <StackPanel Grid.Row="1" Margin="0,8,0,0">
@@ -287,15 +291,15 @@
                                     </ScrollViewer>
                                 </GroupBox>
                                 <WrapPanel>
-                                    <Button Content="New" Width="90" Margin="0,0,8,0" Click="NewProduct_Click" />
-                                    <Button Content="Save" Width="90" Margin="0,0,8,0" Click="SaveProduct_Click" />
-                                    <Button Content="Delete" Width="90" Click="DeleteProduct_Click" />
+                                    <Button Content="{DynamicResource New}" Width="90" Margin="0,0,8,0" Click="NewProduct_Click" />
+                                    <Button Content="{DynamicResource Save}" Width="90" Margin="0,0,8,0" Click="SaveProduct_Click" />
+                                    <Button Content="{DynamicResource Delete}" Width="90" Click="DeleteProduct_Click" />
                                 </WrapPanel>
                             </StackPanel>
                         </Grid>
                     </GroupBox>
 
-                    <GroupBox Header="Customers" Grid.Row="0" Grid.Column="1" Margin="0,0,0,8">
+                    <GroupBox Header="{DynamicResource Customers}" Grid.Row="0" Grid.Column="1" Margin="0,0,0,8">
                         <Grid Margin="8">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="*" />
@@ -303,11 +307,11 @@
                             </Grid.RowDefinitions>
                             <DataGrid x:Name="dgManageCustomers" AutoGenerateColumns="False" SelectionMode="Single" SelectionChanged="DgManageCustomers_SelectionChanged">
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60" />
-                                    <DataGridTextColumn Header="Code" Binding="{Binding Code}" Width="120" />
-                                    <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" />
-                                    <DataGridTextColumn Header="Phone" Binding="{Binding Phone}" Width="120" />
-                                    <DataGridCheckBoxColumn Header="Active" Binding="{Binding IsActive}" Width="70" />
+                                    <DataGridTextColumn Header="{DynamicResource ID}" Binding="{Binding Id}" Width="60" />
+                                    <DataGridTextColumn Header="{DynamicResource Code}" Binding="{Binding Code}" Width="120" />
+                                    <DataGridTextColumn Header="{DynamicResource Name}" Binding="{Binding Name}" Width="*" />
+                                    <DataGridTextColumn Header="{DynamicResource Phone}" Binding="{Binding Phone}" Width="120" />
+                                    <DataGridCheckBoxColumn Header="{DynamicResource Active}" Binding="{Binding IsActive}" Width="70" />
                                 </DataGrid.Columns>
                             </DataGrid>
                             <StackPanel Grid.Row="1" Margin="0,8,0,0">
@@ -328,15 +332,15 @@
                                     </ScrollViewer>
                                 </GroupBox>
                                 <WrapPanel>
-                                    <Button Content="New" Width="90" Margin="0,0,8,0" Click="NewCustomer_Click" />
-                                    <Button Content="Save" Width="90" Margin="0,0,8,0" Click="SaveCustomer_Click" />
-                                    <Button Content="Delete" Width="90" Click="DeleteCustomer_Click" />
+                                    <Button Content="{DynamicResource New}" Width="90" Margin="0,0,8,0" Click="NewCustomer_Click" />
+                                    <Button Content="{DynamicResource Save}" Width="90" Margin="0,0,8,0" Click="SaveCustomer_Click" />
+                                    <Button Content="{DynamicResource Delete}" Width="90" Click="DeleteCustomer_Click" />
                                 </WrapPanel>
                             </StackPanel>
                         </Grid>
                     </GroupBox>
 
-                    <GroupBox Header="Stock Adjustment" Grid.Row="2" Grid.ColumnSpan="2">
+                    <GroupBox Header="{DynamicResource StockAdjustment}" Grid.Row="2" Grid.ColumnSpan="2">
                         <Grid Margin="8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="2*" />
@@ -347,17 +351,17 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <ComboBox x:Name="cbAdjustProduct" Grid.Column="0" DisplayMemberPath="Name" SelectedValuePath="Id" Margin="0,0,8,0" />
-                            <TextBlock Grid.Column="1" Text="Qty +/-" VerticalAlignment="Center" Margin="0,0,6,0" />
+                            <TextBlock Grid.Column="1" Text="{DynamicResource QtyAdjust}" VerticalAlignment="Center" Margin="0,0,6,0" />
                             <TextBox x:Name="txtAdjustQty" Grid.Column="2" Width="90" Margin="0,0,8,0" Text="0" ToolTip="จำนวนที่ปรับ / Adjust Qty" />
                             <TextBox x:Name="txtAdjustUnitCost" Grid.Column="3" Width="100" Margin="0,0,8,0" Text="0" ToolTip="ต้นทุนต่อหน่วย / Unit Cost" />
                             <TextBox x:Name="txtAdjustNote" Grid.Column="4" Margin="0,0,8,0" ToolTip="หมายเหตุ / Note" />
-                            <Button Grid.Column="5" Width="120" Content="Adjust Stock" Click="AdjustStock_Click" />
+                            <Button Grid.Column="5" Width="120" Content="{DynamicResource AdjustStock}" Click="AdjustStock_Click" />
                         </Grid>
                     </GroupBox>
                 </Grid>
             </TabItem>
 
-            <TabItem Header="Import CSV">
+            <TabItem Header="{DynamicResource ImportCSV}">
                 <Grid Margin="12">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -367,25 +371,25 @@
 
                     <Border BorderThickness="1" BorderBrush="#DDD" Padding="10" Margin="0,0,0,10">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Products CSV columns: Sku, Name, Unit, SellPrice, CostPrice, TaxRate" VerticalAlignment="Center" Margin="0,0,12,0" />
-                            <Button Content="Import Products CSV" Width="180" Click="ImportProducts_Click" />
+                            <TextBlock Text="{DynamicResource ProductsCSVColumns}" VerticalAlignment="Center" Margin="0,0,12,0" />
+                            <Button Content="{DynamicResource ImportProductsCSV}" Width="180" Click="ImportProducts_Click" />
                         </StackPanel>
                     </Border>
 
                     <Border Grid.Row="1" BorderThickness="1" BorderBrush="#DDD" Padding="10" Margin="0,0,0,10">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Customers CSV columns: Code, Name, TaxId, Phone, Email, Address" VerticalAlignment="Center" Margin="0,0,12,0" />
-                            <Button Content="Import Customers CSV" Width="180" Click="ImportCustomers_Click" />
+                            <TextBlock Text="{DynamicResource CustomersCSVColumns}" VerticalAlignment="Center" Margin="0,0,12,0" />
+                            <Button Content="{DynamicResource ImportCustomersCSV}" Width="180" Click="ImportCustomers_Click" />
                         </StackPanel>
                     </Border>
 
-                    <GroupBox Grid.Row="2" Header="Import Log">
+                    <GroupBox Grid.Row="2" Header="{DynamicResource ImportLog}">
                         <TextBox x:Name="txtImportLog" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" AcceptsReturn="True" />
                     </GroupBox>
                 </Grid>
             </TabItem>
 
-            <TabItem Header="Settings">
+            <TabItem Header="{DynamicResource Settings}">
                 <Grid Margin="12">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="2*" />
@@ -393,7 +397,7 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <GroupBox Header="Dynamic Fields">
+                    <GroupBox Header="{DynamicResource DynamicFields}">
                         <Grid Margin="8">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -402,24 +406,24 @@
                             </Grid.RowDefinitions>
 
                             <WrapPanel Margin="0,0,0,8">
-                                <TextBlock Text="Entity" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                <TextBlock Text="{DynamicResource Entity}" VerticalAlignment="Center" Margin="0,0,6,0" />
                                 <ComboBox x:Name="cbDynamicEntity" Width="140" Margin="0,0,8,0" SelectionChanged="CbDynamicEntity_SelectionChanged" />
-                                <Button Content="Reload" Width="90" Margin="0,0,8,0" Click="ReloadDynamicFields_Click" />
-                                <Button Content="New" Width="90" Margin="0,0,8,0" Click="NewDynamicField_Click" />
-                                <Button Content="Save Field" Width="100" Margin="0,0,8,0" Click="SaveDynamicField_Click" />
-                                <Button Content="Delete Field" Width="100" Click="DeleteDynamicField_Click" />
+                                <Button Content="{DynamicResource Reload}" Width="90" Margin="0,0,8,0" Click="ReloadDynamicFields_Click" />
+                                <Button Content="{DynamicResource New}" Width="90" Margin="0,0,8,0" Click="NewDynamicField_Click" />
+                                <Button Content="{DynamicResource SaveField}" Width="100" Margin="0,0,8,0" Click="SaveDynamicField_Click" />
+                                <Button Content="{DynamicResource DeleteField}" Width="100" Click="DeleteDynamicField_Click" />
                             </WrapPanel>
 
                             <DataGrid x:Name="dgDynamicFields" Grid.Row="1" AutoGenerateColumns="False" SelectionMode="Single" SelectionChanged="DgDynamicFields_SelectionChanged">
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60" />
-                                    <DataGridTextColumn Header="Key" Binding="{Binding FieldKey}" Width="150" />
-                                    <DataGridTextColumn Header="Label" Binding="{Binding Label}" Width="*" />
-                                    <DataGridTextColumn Header="Type" Binding="{Binding DataType}" Width="90" />
-                                    <DataGridCheckBoxColumn Header="Req" Binding="{Binding IsRequired}" Width="60" />
-                                    <DataGridCheckBoxColumn Header="Visible" Binding="{Binding IsVisible}" Width="70" />
-                                    <DataGridCheckBoxColumn Header="PDF" Binding="{Binding ShowInPdf}" Width="60" />
-                                    <DataGridTextColumn Header="Sort" Binding="{Binding SortOrder}" Width="80" />
+                                    <DataGridTextColumn Header="{DynamicResource ID}" Binding="{Binding Id}" Width="60" />
+                                    <DataGridTextColumn Header="{DynamicResource Key}" Binding="{Binding FieldKey}" Width="150" />
+                                    <DataGridTextColumn Header="{DynamicResource Label}" Binding="{Binding Label}" Width="*" />
+                                    <DataGridTextColumn Header="{DynamicResource Type}" Binding="{Binding DataType}" Width="90" />
+                                    <DataGridCheckBoxColumn Header="{DynamicResource Req}" Binding="{Binding IsRequired}" Width="60" />
+                                    <DataGridCheckBoxColumn Header="{DynamicResource Visible}" Binding="{Binding IsVisible}" Width="70" />
+                                    <DataGridCheckBoxColumn Header="{DynamicResource PDF}" Binding="{Binding ShowInPdf}" Width="60" />
+                                    <DataGridTextColumn Header="{DynamicResource Sort}" Binding="{Binding SortOrder}" Width="80" />
                                 </DataGrid.Columns>
                             </DataGrid>
 
@@ -439,9 +443,9 @@
 
                     <GroupBox Grid.Row="2" Header="Backup and Reset">
                         <StackPanel Orientation="Horizontal" Margin="8">
-                            <Button Content="Export Backup JSON" Width="170" Margin="0,0,8,0" Click="ExportBackup_Click" />
-                            <Button Content="Import Backup JSON" Width="170" Margin="0,0,8,0" Click="ImportBackup_Click" />
-                            <Button Content="Hard Reset (Backup First)" Width="200" Click="HardReset_Click" />
+                                <Button Content="{DynamicResource ExportBackupJSON}" Width="170" Margin="0,0,8,0" Click="ExportBackup_Click" />
+                                <Button Content="{DynamicResource ImportBackupJSON}" Width="170" Margin="0,0,8,0" Click="ImportBackup_Click" />
+                                <Button Content="{DynamicResource HardReset}" Width="200" Click="HardReset_Click" />
                         </StackPanel>
                     </GroupBox>
                 </Grid>

@@ -1,3 +1,5 @@
+
+
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -28,6 +30,8 @@ namespace StockInvoiceApp
 
         private List<ProductLookup> _products = new();
         private List<CustomerLookup> _customers = new();
+
+
         private List<StockLevelRow> _stockRows = new();
         private List<SalesSeriesPoint> _dailySeries = new();
         private List<SalesSeriesPoint> _monthlySeries = new();
@@ -38,6 +42,7 @@ namespace StockInvoiceApp
         private int _editingDynamicFieldId;
         private bool _invoiceLocked;
 
+
         public MainWindow(DatabaseService db, CsvImportService csvImport, PdfReportService pdfReport, InvoicePdfService invoicePdf)
         {
             _db = db;
@@ -46,6 +51,36 @@ namespace StockInvoiceApp
             _invoicePdf = invoicePdf;
             InitializeComponent();
             SetupView();
+        }
+
+        // --- Language Switcher ---
+        private void BtnLangTh_Click(object sender, RoutedEventArgs e)
+        {
+            SwitchLanguage("th");
+        }
+
+        private void BtnLangEn_Click(object sender, RoutedEventArgs e)
+        {
+            SwitchLanguage("en");
+        }
+
+        private void SwitchLanguage(string lang)
+        {
+            var dict = new ResourceDictionary();
+            switch (lang)
+            {
+                case "en":
+                    dict.Source = new Uri("Resources/Strings.en.xaml", UriKind.Relative);
+                    break;
+                default:
+                    dict.Source = new Uri("Resources/Strings.th.xaml", UriKind.Relative);
+                    break;
+            }
+            var appResources = Application.Current.Resources.MergedDictionaries;
+            if (appResources.Count > 0)
+                appResources[0] = dict;
+            else
+                appResources.Add(dict);
         }
 
         private void SetupView()
